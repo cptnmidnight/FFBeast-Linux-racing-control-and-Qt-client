@@ -7,6 +7,8 @@ This document outlines the mandatory rules, technical standards, and visual iden
 To maintain code quality and scalability, all developers must follow these strict rules:
 
 - **Strict Modularization**: Each `struct`, `enum`, or `trait` must reside in its own file. Avoid monolithic files.
+- **KISS Principle (Keep It Simple, Stupid)**: Classes, methods, and files must be simple and focused. Prioritize componentization over complexity.
+- **Offline First Assets**: No external fonts, images, or icons (CDN). All assets must be bundled within the application.
 - **Full Abstraction**: Use traits to separate hardware logic from data storage (persistence). This ensures the system can be tested and extended without hardware dependencies.
 - **Test-Driven Development (TDD)**: Comprehensive tests for backends and the game runner must be maintained and updated with every change.
 - **Code in English**: All code (variables, functions, classes), comments, and technical documentation must be strictly in English for international standardization.

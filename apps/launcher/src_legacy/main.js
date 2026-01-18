@@ -83,30 +83,80 @@ async function loadGames() {
   if (!gameListEl) return;
 
   try {
-    const games = await invoke("get_games");
+    // Fetch both saved games and detect installed games
+    const [savedGames, scannedGames] = await Promise.all([
+      invoke("get_games"),
+      invoke("scan_games").catch(e => {
+        console.warn("Scan failed:", e);
+        return [];
+      })
+    ]);
+
+    // Create a map of games by ID, prioritizing saved games
+    const gamesMap = new Map();
+
+    // First add scanned games
+    scannedGames.forEach(game => {
+      gamesMap.set(game.id, { ...game, isScanned: true });
+    });
+
+    // Then overwrite/add saved games (persisted config takes precedence)
+    savedGames.forEach(game => {
+      gamesMap.set(game.id, { ...game, isScanned: false });
+    });
+
+    // Save to global for configureGame to access
+    window.loadedGames = gamesMap;
+
+    const games = Array.from(gamesMap.values());
+
     if (games.length === 0) {
       gameListEl.innerHTML = `
-        <div class="card" style="grid-column: 1 / -1; opacity: 0.7;">
+        <div class="card" style="grid-column: 1 / -1; opacity: 0.7; text-align: center; padding: 3rem;">
           <p>${t("library.no_games")}</p>
+          <button onclick="invoke('scan_games').then(loadGames)" class="btn-secondary" style="margin-top: 1rem;">
+            Retry Scan
+          </button>
         </div>
       `;
       return;
     }
 
-    gameListEl.innerHTML = games.map(game => `
-      <div class="card">
-        <h3>${game.name}</h3>
-        <p style="font-size: 0.8rem; opacity: 0.6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-          ${game.path}
-        </p>
-        <button onclick="launchGame('${game.id}')" style="margin-top: 1rem; width: 100%;">
-          ${t("library.launch")}
-        </button>
+    gameListEl.innerHTML = games.map(game => {
+      // Basic gradient placeholder if no cover
+      const bgStyle = game.cover_path
+        ? `background-image: url('${convertFileSrc(game.cover_path)}'); background-size: cover;`
+        : `background: linear-gradient(135deg, #2b2b2b 0%, #1a1a1a 100%);`;
+
+      return `
+      <div class="card game-card" style="position: relative; overflow: hidden; padding: 0; min-height: 200px; display: flex; flex-direction: column;">
+        <div class="game-cover" style="height: 120px; ${bgStyle} width: 100%;">
+           ${!game.cover_path ? `<div style="display: flex; justify-content: center; align-items: center; height: 100%; color: #888; font-size: 3rem;">🎮</div>` : ''}
+        </div>
+        <div class="game-info" style="padding: 1rem; flex: 1; display: flex; flex-direction: column;">
+          <h3 style="margin: 0 0 0.5rem 0; font-size: 1.1rem;">${game.name}</h3>
+          
+          <div style="margin-top: auto; display: flex; gap: 0.5rem;">
+            <button onclick="launchGame('${game.id}')" class="btn-primary" style="flex: 1;">
+              ${t("library.launch")}
+            </button>
+             <button onclick="configureGame('${game.id}')" class="btn-secondary" style="padding: 0 0.8rem;" title="Configure Profile">
+              ⚙️
+            </button>
+          </div>
+        </div>
+        ${game.isScanned ? `<span class="badge" style="position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.6); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem;">Detected</span>` : ''}
       </div>
-    `).join("");
+    `}).join("");
   } catch (e) {
     console.error("Error loading games:", e);
+    gameListEl.innerHTML = `<div class="error-msg">Failed to load library: ${e}</div>`;
   }
+}
+
+// Helper to convert local paths to Tauri asset URLs if needed (for images)
+function convertFileSrc(filePath) {
+  return window.__TAURI__.core.convertFileSrc(filePath);
 }
 
 window.invokeResetCenter = async () => {
@@ -138,6 +188,22 @@ window.launchGame = async (id) => {
   }
 };
 
+window.configureGame = (id) => {
+  const game = window.loadedGames.get(id);
+  if (!game) return;
+
+  const modal = document.querySelector("#add-game-modal");
+  document.querySelector("#game-name-input").value = game.name;
+  document.querySelector("#game-path-input").value = game.path;
+
+  if (game.wheel_profile) {
+    document.querySelector("#game-range-input").value = game.wheel_profile.motion_range;
+    document.querySelector("#game-force-input").value = game.wheel_profile.total_force;
+  }
+
+  modal.classList.add("active");
+};
+
 window.openAdvancedConfig = async () => {
   try {
     await invoke("open_advanced_config");
@@ -167,8 +233,23 @@ window.saveNewGame = async () => {
     return;
   }
 
+  // Use the ID from the name if creating new, or preserve ID if editing existing
+  // Ideally we should have a hidden ID field, but for now let's derive or lookup
+  let id = name.toLowerCase().replace(/\s+/g, '-');
+
+  // If we are editing a known scanned game, preserve its ID
+  // (Simple heuristic: checking if name matches any loaded game)
+  if (window.loadedGames) {
+    for (const [gId, g] of window.loadedGames.entries()) {
+      if (g.name === name) {
+        id = gId;
+        break;
+      }
+    }
+  }
+
   const game = {
-    id: name.toLowerCase().replace(/\s+/g, '-'),
+    id: id,
     name: name,
     path: path,
     arguments: [],

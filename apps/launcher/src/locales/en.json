@@ -1,0 +1,36 @@
+{
+    "app": {
+        "title": "SODevs Game Launcher",
+        "searching": "Searching for hardware...",
+        "connected": "Hardware Connected"
+    },
+    "library": {
+        "title": "Your Library",
+        "add_game": "Add Game",
+        "launch": "Launch",
+        "no_games": "No games found locally.",
+        "scan_retry": "Scan Again",
+        "form": {
+            "title": "Add New Game",
+            "name": "Game Name",
+            "path": "Executable Path",
+            "args": "Launch Arguments (optional)",
+            "browse": "Browse",
+            "cancel": "Cancel",
+            "save": "Save Game"
+        }
+    },
+    "monitor": {
+        "position": "Position",
+        "torque": "Torque",
+        "reset_center": "Reset Center",
+        "reboot": "Reboot Device",
+        "confirm_reboot": "Are you sure you want to reboot the device?"
+    },
+    "config": {
+        "title": "Wheel Configuration",
+        "total_force": "Total Force",
+        "motion_range": "Motion Range",
+        "dynamic_damp": "Dynamic Dampening"
+    }
+}

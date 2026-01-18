@@ -1,0 +1,36 @@
+{
+    "app": {
+        "title": "SODevs Game Launcher",
+        "searching": "Procurando hardware...",
+        "connected": "Hardware Conectado"
+    },
+    "library": {
+        "title": "Sua Biblioteca",
+        "add_game": "Adicionar Jogo",
+        "launch": "Jogar",
+        "no_games": "Nenhum jogo encontrado.",
+        "scan_retry": "Escanear Novamente",
+        "form": {
+            "title": "Adicionar Novo Jogo",
+            "name": "Nome do Jogo",
+            "path": "Caminho do Executável",
+            "args": "Argumentos de Lançamento (opcional)",
+            "browse": "Procurar",
+            "cancel": "Cancelar",
+            "save": "Salvar Jogo"
+        }
+    },
+    "monitor": {
+        "position": "Posição",
+        "torque": "Torque",
+        "reset_center": "Calibrar Centro",
+        "reboot": "Reiniciar Dispositivo",
+        "confirm_reboot": "Tem certeza que deseja reiniciar o dispositivo?"
+    },
+    "config": {
+        "title": "Configuração do Volante",
+        "total_force": "Força Total",
+        "motion_range": "Graus de Rotação",
+        "dynamic_damp": "Amortecimento Dinâmico"
+    }
+}

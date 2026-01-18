@@ -92,6 +92,12 @@ fn get_games(storage: State<'_, Arc<TomlStorage>>) -> Vec<crate::models::Game> {
 }
 
 #[tauri::command]
+#[instrument]
+async fn scan_games() -> Vec<crate::models::Game> {
+    crate::services::game_scanner::GameScanner::scan()
+}
+
+#[tauri::command]
 #[instrument(skip(storage), err)]
 fn save_game(storage: State<'_, Arc<TomlStorage>>, game: crate::models::Game) -> Result<(), String> {
     storage.save_game(game).map_err(|e| e.to_string())
@@ -105,7 +111,16 @@ async fn launch_game(
     hardware: State<'_, Arc<HardwareService>>,
 ) -> Result<(), String> {
     let games = storage.list_games().map_err(|e| e.to_string())?;
-    let game = games.into_iter().find(|g| g.id == id).ok_or("Game not found")?;
+    
+    // Try to find in storage first
+    let game = match games.into_iter().find(|g| g.id == id) {
+        Some(g) => g,
+        None => {
+            // If not in storage, check scanner
+            let scanned = crate::services::game_scanner::GameScanner::scan();
+            scanned.into_iter().find(|g| g.id == id).ok_or("Game not found in library or scanner")?
+        }
+    };
     
     // Convert WheelProfileSettings to WheelProfile if present
     let profile = game.wheel_profile.as_ref().map(|settings| {
@@ -150,6 +165,10 @@ pub fn run() {
         .init();
 
     info!("Starting SODevs Launcher");
+    
+    // Fix for Linux WebKit rendering issue (Blank screen)
+    #[cfg(target_os = "linux")]
+    std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
 
     let hardware = Arc::new(HardwareService::new());
     let hardware_clone = hardware.clone();
@@ -182,6 +201,7 @@ pub fn run() {
             greet, 
             check_hardware, 
             get_games,
+            scan_games,
             save_game,
             reset_center,
             reboot_device,

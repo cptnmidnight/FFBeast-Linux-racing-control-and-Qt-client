@@ -303,13 +303,22 @@ button:active {
 /* Game Grid */
 .game-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 2rem;
   margin-top: 1.5rem;
 }
 
 .game-grid .card {
-  padding: 2rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .library-section .section-header {
@@ -356,6 +365,17 @@ button:active {
 
 .form-group {
   margin-bottom: 2rem;
+}
+
+.form-group-row {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.form-group-row .form-group {
+  flex: 1;
+  margin-bottom: 0;
 }
 
 .form-group label {
