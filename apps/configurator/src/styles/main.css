@@ -1,0 +1,98 @@
+@import 'fonts.css';
+@import 'variables.css';
+@import 'base.css';
+@import 'sidebar.css';
+@import 'components.css';
+@import 'monitor.css';
+@import 'logs.css';
+
+/* Tab specific or minor styles */
+.protocol-info-box {
+    background: var(--bg-card);
+    border-left: 3px solid var(--accent);
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.protocol-info-section {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.protocol-info-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.protocol-info-section h4 {
+    font-size: 0.75rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+}
+
+.protocol-info-section p {
+    font-size: 0.8rem;
+    line-height: 1.5;
+    color: var(--text-main);
+    margin: 0;
+}
+
+/* Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.modal-overlay.active {
+    display: flex;
+    opacity: 1;
+}
+
+.modal-content {
+    background: #18181c;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    width: 400px;
+    max-width: 90%;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    transform: translateY(20px);
+    transition: transform 0.2s;
+}
+
+.modal-overlay.active .modal-content {
+    transform: translateY(0);
+}
+
+.modal-input,
+.modal-select {
+    background: #0a0a0c;
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 10px;
+    border-radius: 4px;
+    width: 100%;
+    font-size: 0.9rem;
+    outline: none;
+}
+
+.modal-input:focus,
+.modal-select:focus {
+    border-color: var(--accent);
+}

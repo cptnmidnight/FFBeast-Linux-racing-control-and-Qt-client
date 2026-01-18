@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FFBeast - Configuração Avançada</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #0f172a;
+            color: #f1f5f9;
+            padding: 2rem;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            color: #8b5cf6;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .card {
+            padding: 1.5rem;
+            background: #1e293b;
+            border-radius: 12px;
+            border: 1px solid #334155;
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+            color: #a78bfa;
+        }
+
+        .field {
+            margin-bottom: 1rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.8;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: #f1f5f9;
+        }
+
+        button {
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            margin-right: 0.5rem;
+        }
+
+        .btn-primary {
+            background: #8b5cf6;
+            color: white;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid #334155;
+            color: #f1f5f9;
+        }
+
+        #status {
+            font-family: monospace;
+            font-size: 0.85rem;
+            background: #0f172a;
+            padding: 1rem;
+            border-radius: 6px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>⚙️ Configuração Avançada</h1>
+
+    <div style="margin-bottom: 1rem;">
+        <button onclick="saveSettings()" class="btn-primary">💾 Salvar</button>
+        <button onclick="closeWin()" class="btn-secondary">✕ Fechar</button>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h2>Hardware</h2>
+            <div class="field">
+                <label>Encoder CPR</label>
+                <input type="number" id="encoder_cpr" value="10000">
+            </div>
+            <div class="field">
+                <label>Pole Pairs</label>
+                <input type="number" id="pole_pairs" value="22">
+            </div>
+            <div class="field">
+                <label>Power Limit (%)</label>
+                <input type="range" id="power_limit" min="0" max="100" value="100">
+                <span id="power_val">100%</span>
+            </div>
+            <div class="field">
+                <label>Encoder Direction</label>
+                <select id="encoder_direction">
+                    <option value="1">Normal</option>
+                    <option value="-1">Invertido</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Status</h2>
+            <div id="status">Carregando...</div>
+        </div>
+    </div>
+
+    <script>
+        console.log("Page loaded");
+
+        const statusDiv = document.getElementById('status');
+
+        // Update power limit display
+        document.getElementById('power_limit').addEventListener('input', (e) => {
+            document.getElementById('power_val').textContent = e.target.value + '%';
+        });
+
+        // Close window
+        window.closeWin = async () => {
+            console.log("Closing...");
+            try {
+                if (window.__TAURI__) {
+                    await window.__TAURI__.window.getCurrent().close();
+                }
+            } catch (e) {
+                console.error(e);
+                window.close();
+            }
+        };
+
+        // Save settings
+        window.saveSettings = async () => {
+            console.log("Saving...");
+            statusDiv.textContent = "Salvando...";
+
+            try {
+                const settings = {
+                    encoder_cpr: parseInt(document.getElementById('encoder_cpr').value),
+                    pole_pairs: parseInt(document.getElementById('pole_pairs').value),
+                    power_limit: parseInt(document.getElementById('power_limit').value),
+                    encoder_direction: parseInt(document.getElementById('encoder_direction').value),
+                    integral_gain: 100,
+                    proportional_gain: 50,
+                    force_enabled: 1,
+                    debug_torque: 0,
+                    amplifier_gain: 1,
+                    calibration_magnitude: 50,
+                    calibration_speed: 10,
+                    braking_limit: 100,
+                    position_smoothing: 1,
+                    speed_buffer_size: 5,
+                    force_direction: 1
+                };
+
+                await window.__TAURI__.core.invoke("update_hardware_settings", { settings });
+                await window.__TAURI__.core.invoke("save_settings_to_hardware");
+
+                statusDiv.textContent = "✅ Salvo com sucesso!";
+                alert("Configurações salvas!");
+            } catch (e) {
+                console.error(e);
+                statusDiv.textContent = "❌ Erro: " + e;
+                alert("Erro ao salvar: " + e);
+            }
+        };
+
+        // Load settings
+        async function loadSettings() {
+            console.log("Loading settings...");
+            try {
+                if (!window.__TAURI__) {
+                    statusDiv.textContent = "❌ Tauri não disponível";
+                    return;
+                }
+
+                const hw = await window.__TAURI__.core.invoke("get_hardware_settings");
+                console.log("Settings:", hw);
+
+                document.getElementById('encoder_cpr').value = hw.encoder_cpr || 10000;
+                document.getElementById('pole_pairs').value = hw.pole_pairs || 22;
+                document.getElementById('power_limit').value = hw.power_limit || 100;
+                document.getElementById('encoder_direction').value = hw.encoder_direction || 1;
+                document.getElementById('power_val').textContent = (hw.power_limit || 100) + '%';
+
+                statusDiv.textContent = "✅ Configurações carregadas";
+            } catch (e) {
+                console.error(e);
+                statusDiv.textContent = "❌ Erro ao carregar: " + e;
+            }
+        }
+
+        // Listen for status updates
+        if (window.__TAURI__) {
+            window.__TAURI__.event.listen("wheel-status", (event) => {
+                statusDiv.textContent = JSON.stringify(event.payload, null, 2);
+            }).catch(e => console.error(e));
+
+            // Load after a short delay
+            setTimeout(loadSettings, 200);
+        } else {
+            statusDiv.textContent = "❌ Tauri API não disponível";
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,11 @@
+[package]
+name = "ffbeast-controller"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+hidapi = "2.6.4"
+anyhow = "1.0.100"
+tracing = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+gilrs = "0.10"

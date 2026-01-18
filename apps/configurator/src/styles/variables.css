@@ -1,0 +1,18 @@
+:root {
+    --bg-main: #0a0a0c;
+    --bg-sidebar: #121216;
+    --bg-card: rgba(25, 25, 30, 0.7);
+    --text-main: #f0f0f5;
+    --text-dim: #8e8e9c;
+    --accent: #00d4ff;
+    --accent-glow: rgba(0, 212, 255, 0.4);
+    --danger: #ff4757;
+    --success: #00ff88;
+    --warning: #ffa502;
+    --border: rgba(255, 255, 255, 0.05);
+
+    /* Compact Spacing */
+    --radius: 8px;
+    --radius-sm: 4px;
+    --z-toast: 1000;
+}
