@@ -40,6 +40,12 @@
     "setting_amplifier_gain": "Ganho Driver",
     "setting_p_gain": "Ganho P (Proporcional)",
     "setting_i_gain": "Ganho I (Integral)",
+    "setting_encoder_dir": "Invert Motor Encoder",
+    "setting_force_dir": "Invert Force Direction",
+    "setting_force_enabled": "Enable FFB / Torque",
+    "setting_debug_torque": "Debug Forces",
+    "setting_invert_game_force": "Invert Game Forces",
+    "setting_axis_invert": "Invert Axis",
     "group_motor": "Configuração do Motor",
     "group_pid": "Controle PID (Loop)",
     "group_pid_desc": "Controlador PID (Proporcional-Integral-Derivativo) para posicionamento preciso do volante e resposta de feedback.",
@@ -201,5 +207,11 @@
     "toast_id_copied": "ID copiado para a área de transferência",
     "toast_service_started": "Serviço de Mapeamento Iniciado",
     "toast_service_stopped": "Serviço de Mapeamento Parado",
-    "toast_service_error": "Erro no Serviço de Mapeamento"
+    "toast_service_error": "Erro no Serviço de Mapeamento",
+    "help_force_enabled": "Habilita ou desabilita globalmente o torque do motor e o force feedback.",
+    "help_encoder_direction": "Inverte a leitura do encoder do motor. Use se a posição aumentar para o lado errado.",
+    "help_force_direction": "Inverte a direção da força de saída. Use se o volante empurrar para fora em vez de centralizar.",
+    "help_debug_torque": "Envia valores brutos de torque para os logs para depuração.",
+    "help_direct_x_constant_direction": "Inverte a direção dos efeitos de Força Constante vindos do jogo.",
+    "help_axis_invert": "Inverte o valor da entrada do eixo (ex: para pedais invertidos)."
 }

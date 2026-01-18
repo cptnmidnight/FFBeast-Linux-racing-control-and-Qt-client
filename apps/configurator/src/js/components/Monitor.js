@@ -53,7 +53,7 @@ export class MonitorComponent {
             const angle = (status.position / 10000.0) * (range / 2.0);
             this.elements.wheelRotateGroup.style.transform = `rotate(${angle}deg)`;
             if (Math.abs(angle) > 10) {
-                console.log('[Monitor] Wheel:', { pos: status.position, range, angle: angle.toFixed(1) });
+                // console.log('[Monitor] Wheel:', { pos: status.position, range, angle: angle.toFixed(1) });
             }
         } else {
             console.error('[Monitor] wheelRotateGroup element NOT FOUND!');
@@ -90,7 +90,7 @@ export class MonitorComponent {
                 }
             }
             if (activeButtons.length > 0) {
-                console.log('[Monitor] Active buttons:', activeButtons.join(', '));
+                // console.log('[Monitor] Active buttons:', activeButtons.join(', '));
             }
 
             // Log button state periodically even when zero
@@ -122,14 +122,20 @@ export class MonitorComponent {
                 allValues.push(val);
 
                 // Visibility Logic:
-                // 1. Show if it's one of the primary 3 axes (standard for pedals/wheel)
-                // 2. Show if it's explicitly set to Analog in Pin Mode
-                // 3. Show if it has significant signal (> 20) to help user debug
-                let isActive = (i < 3);
+                // 1. Show if explicitly set to Analog in Pin Mode (if settings loaded)
+                // 2. Fallback to first 3 if settings not loaded yet
+                // 3. Show if it has significant signal (> 100) to help user debug
+                let isActive = false;
+
                 if (currentGpioSettings && currentGpioSettings.pin_mode) {
                     if (currentGpioSettings.pin_mode[i] === 2) isActive = true;
                 }
-                if (!isActive && val > 20) isActive = true;
+
+                // Remove default fallback to 0,1,2. Only show if configured OR has signal.
+                // This fixes the issue on Linux where axes might be mapped to 4,5,6 (indices 3,4,5).
+
+                // Auto-detect activity (threshold bumped to 100 to ignore noise)
+                if (!isActive && val > 100) isActive = true;
 
                 if (isActive) {
                     col.style.display = 'flex';
@@ -146,9 +152,10 @@ export class MonitorComponent {
                     col.style.display = 'none';
                 }
             }
-            if (activeAxes.length > 0) {
-                console.log('[Monitor] Active analog axes:', activeAxes.join(', '));
-            }
+            // REDUCED LOGGING: Only log active axes if they change significantly or throttle it (Removed spammy log)
+            // if (activeAxes.length > 0) {
+            //    console.log('[Monitor] Active analog axes:', activeAxes.join(', '));
+            // }
 
             // Log ADC state periodically even when zero
             if (!this.adcLogCount) this.adcLogCount = 0;

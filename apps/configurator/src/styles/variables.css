@@ -15,4 +15,6 @@
     --radius: 8px;
     --radius-sm: 4px;
     --z-toast: 1000;
+
+    color-scheme: dark;
 }

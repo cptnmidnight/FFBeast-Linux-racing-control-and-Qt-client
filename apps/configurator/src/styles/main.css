@@ -90,9 +90,16 @@
     width: 100%;
     font-size: 0.9rem;
     outline: none;
+    -webkit-appearance: none;
+    appearance: none;
 }
 
 .modal-input:focus,
 .modal-select:focus {
     border-color: var(--accent);
+}
+
+.modal-select option {
+    background-color: #0a0a0c !important;
+    color: var(--text-main);
 }

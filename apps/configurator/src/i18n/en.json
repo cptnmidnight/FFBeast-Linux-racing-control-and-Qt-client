@@ -40,6 +40,12 @@
     "setting_amplifier_gain": "Amplifier Gain",
     "setting_p_gain": "Proportional Gain (P)",
     "setting_i_gain": "Integral Gain (I)",
+    "setting_encoder_dir": "Invert Encoder",
+    "setting_force_dir": "Invert Force Direction",
+    "setting_force_enabled": "Enable FFB / Torque",
+    "setting_debug_torque": "Debug Forces",
+    "setting_invert_game_force": "Invert Game Forces",
+    "setting_axis_invert": "Invert Axis",
     "group_motor": "Motor Config",
     "group_pid": "PID Control Loop",
     "group_pid_desc": "PID (Proportional-Integral-Derivative) controller for precise wheel positioning and force feedback response.",
@@ -183,5 +189,11 @@
     "toast_test_stopped": "FFB test stopped",
     "toast_test_failed": "Failed to start test",
     "toast_dfu_success": "Entering DFU mode...",
-    "toast_dfu_failed": "Failed to enter DFU mode"
+    "toast_dfu_failed": "Failed to enter DFU mode",
+    "help_force_enabled": "Globally enable or disable motor torque and force feedback.",
+    "help_encoder_direction": "Invert the reading of the motor encoder. Use if the wheel position increases when it should decrease.",
+    "help_force_direction": "Invert the direction of the force output. Use if the wheel pushes away from center instead of returning.",
+    "help_debug_torque": "Send raw torque values to the logs for debugging purposes.",
+    "help_direct_x_constant_direction": "Invert the direction of Constant Force effects coming from the game.",
+    "help_axis_invert": "Invert the axis input (e.g., for inverted pedals)."
 }

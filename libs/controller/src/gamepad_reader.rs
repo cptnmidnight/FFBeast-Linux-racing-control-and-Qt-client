@@ -133,7 +133,8 @@ impl GamepadReader for GilrsGamepadReader {
         ];
 
         for (button, bit_pos) in button_map.iter() {
-            if gamepad.is_pressed(*button) {
+            let pressed = gamepad.is_pressed(*button);
+            if pressed {
                 state.buttons |= 1 << bit_pos;
             }
         }
@@ -157,6 +158,28 @@ impl GamepadReader for GilrsGamepadReader {
         }
         if let Some(axis) = gamepad.axis_data(Axis::RightZ) {
             state.axes[5] = Self::axis_to_adc(axis.value());
+        }
+
+        // DEBUG: Trace inputs to identify mapping issues on Linux
+        static mut LOG_SKIP: usize = 0;
+        unsafe {
+            if LOG_SKIP % 60 == 0 { // Log ~1Hz
+                // Check all axes
+                let active_axes: Vec<_> = (0..6).filter(|&i| state.axes[i] > 10 && state.axes[i] < 4085).collect();
+                
+                // Check all buttons
+                let mut active_btns = Vec::new();
+                for (btn, _) in button_map.iter() {
+                    if gamepad.is_pressed(*btn) {
+                        active_btns.push(format!("{:?}", btn));
+                    }
+                }
+
+                if !active_axes.is_empty() || !active_btns.is_empty() {
+                    tracing::info!("[GamepadReader] Active Inputs - Axes: {:?} (indices), Buttons: {:?}", active_axes, active_btns);
+                }
+            }
+            LOG_SKIP += 1;
         }
 
         self.last_state = state.clone();

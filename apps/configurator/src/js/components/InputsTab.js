@@ -33,6 +33,24 @@ export const InputsTab = {
                     <div class="adc-config-section" id="adc-config-${i}">
                         ${createSliderRow({ key: 'raxis_min', label: 'setting_min', min: 0, max: 32767, step: 1, unit: '' }, { raxis_min: currentAdcSettings.raxis_min[i] }, `adc-${i}`)}
                         ${createSliderRow({ key: 'raxis_max', label: 'setting_max', min: 0, max: 32767, step: 1, unit: '' }, { raxis_max: currentAdcSettings.raxis_max[i] }, `adc-${i}`)}
+                        
+                        <div class="setting-row" style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+                             <span class="setting-label">${translate('setting_axis_invert')} <img src="./assets/icons/help.svg" class="help-icon" data-help="help_axis_invert"></span>
+                             <label class="switch" style="position:relative; display:inline-block; width:40px; height:20px;">
+                                <input type="checkbox" id="chk-adc-${i}-invert" 
+                                       class="adc-invert-chk"
+                                       data-idx="${i}"
+                                       ${currentAdcSettings.raxis_invert[i] ? 'checked' : ''}
+                                       style="opacity:0; width:0; height:0;">
+                                <span class="slider round" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:#333; transition:.4s; border-radius:34px;"></span>
+                            </label>
+                            <style>
+                                .switch input:checked + .slider { background-color: var(--accent); }
+                                .switch input:focus + .slider { box-shadow: 0 0 1px var(--accent); }
+                                .switch input:checked + .slider:before { transform: translateX(20px); }
+                                .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; }
+                            </style>
+                        </div>
                     </div>
                     ` : `<div style="font-size:0.7rem; color:var(--text-dim); font-style:italic;">Hardware calibration only for primary axes.</div>`}
                 </div>
@@ -51,6 +69,14 @@ export const InputsTab = {
                     currentAdcSettings.raxis_max[i] = valSet.raxis_max;
                     HardwareService.updateAdcSettings(currentAdcSettings);
                 });
+
+                const invertChk = container.querySelector(`#chk-adc-${i}-invert`);
+                if (invertChk) {
+                    invertChk.onchange = (e) => {
+                        currentAdcSettings.raxis_invert[i] = e.target.checked ? 1 : 0;
+                        HardwareService.updateAdcSettings(currentAdcSettings);
+                    };
+                }
             }
         });
     }

@@ -1,6 +1,6 @@
 import { translate } from '../services/i18n.js';
 import { HardwareService } from '../services/HardwareService.js';
-import { createSliderRow, attachSliderEvents } from './SettingsWidgets.js';
+import { createSliderRow, createCheckboxRow, attachSliderEvents, attachCheckboxEvents } from './SettingsWidgets.js';
 
 export const EffectsTab = {
     render(container, settings) {
@@ -26,10 +26,14 @@ export const EffectsTab = {
                 ${[
                 { key: 'direct_x_constant_strength', label: 'setting_dx_constant', min: 0, max: 100, step: 1, unit: '%' },
                 { key: 'direct_x_periodic_strength', label: 'setting_dx_periodic', min: 0, max: 100, step: 1, unit: '%' },
-                { key: 'direct_x_spring_strength', label: 'setting_dx_spring', min: 0, max: 100, step: 1, unit: '%' }
+                { key: 'direct_x_spring_strength', label: 'setting_dx_spring', min: 0, max: 100, step: 1, unit: '%' },
             ].map(i => createSliderRow(i, settings, 'fx')).join('')}
+            ${[
+                { key: 'direct_x_constant_direction', label: 'setting_invert_game_force', trueValue: -1, falseValue: 1 }
+            ].map(i => createCheckboxRow(i, settings, 'fx')).join('')}
             </div>
         `;
         attachSliderEvents(container, settings, 'fx', () => HardwareService.updateEffectSettings(settings));
+        attachCheckboxEvents(container, settings, 'fx', () => HardwareService.updateEffectSettings(settings));
     }
 };

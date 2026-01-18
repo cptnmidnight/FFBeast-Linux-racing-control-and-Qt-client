@@ -56,6 +56,12 @@ class App {
                 if (p) {
                     const el = Logger.renderEntry(entry);
                     p.appendChild(el);
+
+                    // DOM Performance: Limit visible logs
+                    while (p.children.length > 200) {
+                        p.removeChild(p.firstChild);
+                    }
+
                     if (autoScroll) p.scrollTop = p.scrollHeight;
                 }
             });
