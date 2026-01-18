@@ -12,6 +12,7 @@ import { ProtocolTab } from './components/ProtocolTab.js';
 import { InputsTab } from './components/InputsTab.js';
 import { ToolsTab } from './components/ToolsTab.js';
 import { SettingsTab } from './components/SettingsTab.js';
+import { LicenseTab } from './components/LicenseTab.js';
 import { ModalManager } from './components/ModalManager.js';
 import { Logger } from './utils/Logger.js';
 
@@ -125,34 +126,6 @@ class App {
                 HardwareService.reboot().then(() => showToast(this.elements, translate('msg_rebooting'), 'info'));
         }
 
-        // License Activation
-        const btnActivate = document.getElementById('btn-activate');
-        const inputKey = document.getElementById('input-serial-key');
-        if (btnActivate && inputKey) {
-            btnActivate.onclick = async () => {
-                const key = inputKey.value;
-                if (!key || key.trim().length < 5) {
-                    showToast(this.elements, translate('toast_invalid_license'), 'error');
-                    return;
-                }
-                try {
-                    await HardwareService.activateLicense(key);
-                    showToast(this.elements, translate('toast_license_activated'), 'success');
-                    setTimeout(() => this.loadAllData(), 2000);
-                } catch (e) {
-                    showToast(this.elements, translate('toast_activation_failed') + ": " + e, 'error');
-                }
-            };
-        }
-
-        const btnCopy = document.getElementById('btn-copy-id');
-        if (btnCopy) {
-            btnCopy.onclick = () => {
-                const txt = document.getElementById('lic-tab-id')?.textContent || "";
-                navigator.clipboard.writeText(txt);
-                showToast(this.elements, translate('toast_id_copied'), 'info');
-            };
-        }
 
         // FFB Test Sliders
         const setupTestFx = (id, type) => {
@@ -266,6 +239,7 @@ class App {
             case 'protocol': ProtocolTab.render(grid, this.currentGpioSettings); break;
             case 'tools': ToolsTab.render(grid); break;
             case 'settings': SettingsTab.render(grid); break;
+            case 'license': LicenseTab.render(grid, this.elements); break;
             case 'logs': /* Logs are auto-handled by Logger subscriber */ break;
             case 'inputs':
                 InputsTab.render(grid, this.currentAdcSettings, this.currentGpioSettings, this.axisNames,

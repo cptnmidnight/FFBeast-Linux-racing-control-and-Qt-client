@@ -60,6 +60,19 @@
     background: rgba(255, 255, 255, 0.05);
 }
 
+.btn-outline.narrow {
+    padding: 0.3rem 0.5rem;
+}
+
+.icon-white {
+    filter: brightness(0) invert(1);
+    opacity: 0.8;
+}
+
+.btn-outline:hover .icon-white {
+    opacity: 1;
+}
+
 .setting-row {
     margin-bottom: 0.4rem;
 }
