@@ -20,18 +20,9 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Verify package-lock.json exists
-        working-directory: apps/configurator
-        run: |
-          if (!(Test-Path package-lock.json)) {
-            Write-Error "Error: package-lock.json not found in apps/configurator"
-            Write-Error "Please commit package-lock.json to the repository"
-            exit 1
-          }
-
       - name: Install dependencies
         working-directory: apps/configurator
-        run: npm ci
+        run: npm install
 
       - name: Build Configurator (Windows)
         working-directory: apps/configurator
@@ -64,18 +55,9 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Verify package-lock.json exists
-        working-directory: apps/configurator
-        run: |
-          if [ ! -f package-lock.json ]; then
-            echo "Error: package-lock.json not found in apps/configurator"
-            echo "Please commit package-lock.json to the repository"
-            exit 1
-          fi
-
       - name: Install dependencies
         working-directory: apps/configurator
-        run: npm ci
+        run: npm install
 
       - name: Build Configurator (Linux)
         working-directory: apps/configurator
@@ -110,18 +92,9 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Verify package-lock.json exists
-        working-directory: launcher
-        run: |
-          if [ ! -f package-lock.json ]; then
-            echo "Error: package-lock.json not found in launcher"
-            echo "Please commit package-lock.json to the repository"
-            exit 1
-          fi
-
       - name: Install dependencies
         working-directory: launcher
-        run: npm ci
+        run: npm install
 
       - name: Build Launcher (Linux)
         working-directory: launcher
