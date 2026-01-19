@@ -21,8 +21,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
-          cache-dependency-path: apps/configurator/package-lock.json
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -33,6 +31,15 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: apps/configurator/src-tauri
+
+      - name: Verify package-lock.json exists
+        working-directory: apps/configurator
+        run: |
+          if [ ! -f package-lock.json ]; then
+            echo "Error: package-lock.json not found in apps/configurator"
+            echo "Please commit package-lock.json to the repository"
+            exit 1
+          fi
 
       - name: Install dependencies
         working-directory: apps/configurator
@@ -64,8 +71,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
-          cache-dependency-path: launcher/package-lock.json
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -76,6 +81,15 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: launcher/src-tauri
+
+      - name: Verify package-lock.json exists
+        working-directory: launcher
+        run: |
+          if [ ! -f package-lock.json ]; then
+            echo "Error: package-lock.json not found in launcher"
+            echo "Please commit package-lock.json to the repository"
+            exit 1
+          fi
 
       - name: Install dependencies
         working-directory: launcher
