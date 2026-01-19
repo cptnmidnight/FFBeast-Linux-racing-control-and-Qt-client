@@ -8,28 +8,24 @@
       
       <div class="nav-items">
         <div 
-          v-for="tab in tabs" 
+          v-for="tab in mainTabs" 
           :key="tab.id" 
-          :class="['nav-item', { active: currentTab === tab.id }, tab.class]" 
+          :class="['nav-item', { active: currentTab === tab.id }]" 
           @click="currentTab = tab.id"
         >
           <span class="icon">{{ tab.icon }}</span>
           <span class="label">{{ $t(tab.label) }}</span>
         </div>
+        
+        <div 
+          :class="['nav-item', 'settings-item', { active: currentTab === 'settings' }]" 
+          @click="currentTab = 'settings'"
+        >
+          <span class="icon">⚙️</span>
+          <span class="label">{{ $t('tab_settings') }}</span>
+        </div>
       </div>
 
-      <!-- Connection Status in Sidebar -->
-      <div class="connection-status" :class="{ connected: store.isConnected, error: store.lastError }">
-        <div class="status-indicator"></div>
-        <div class="status-text">
-          <span v-if="store.isConnecting">Connecting...</span>
-          <span v-else-if="store.isConnected">{{ $t('status_connected') }}</span>
-          <span v-else>{{ $t('status_disconnected') }}</span>
-        </div>
-        <div v-if="store.lastError" class="error-text" :title="store.lastError">
-          {{ store.lastError.substring(0, 30) }}...
-        </div>
-      </div>
       <div class="sidebar-footer">
         <div :class="['status-indicator', { connected: store.isConnected, disconnected: !store.isConnected }]">
           <div class="status-dot"></div>
@@ -97,7 +93,7 @@ const ui = useUIStore();
 const { t } = useI18n();
 const currentTab = ref('monitor');
 
-const tabs = [
+const mainTabs = [
   { id: 'monitor', label: 'tab_monitor', icon: '📊' },
   { id: 'effects', label: 'tab_effects', icon: '⚡' },
   { id: 'hardware', label: 'tab_hardware', icon: '⚙️' },
@@ -108,8 +104,9 @@ const tabs = [
   { id: 'license', label: 'tab_license', icon: '🔑' },
   { id: 'tools', label: 'tab_tools', icon: '🛠️' },
   { id: 'logs', label: 'tab_logs', icon: '📝' },
-  { id: 'settings', label: 'tab_settings', icon: '🛠️', class: 'mt-auto' },
 ];
+
+const tabs = [...mainTabs, { id: 'settings', label: 'tab_settings', icon: '⚙️' }];
 
 const currentTabLabel = computed(() => {
   return tabs.find(t => t.id === currentTab.value)?.label || '';
@@ -194,13 +191,12 @@ const setupGlobalTooltips = () => {
   letter-spacing: 1px;
 }
 
-.nav-links {
-  list-style: none;
-  padding: 0.75rem;
+.nav-items {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding: 0.75rem;
 }
 
 .nav-item {
@@ -215,6 +211,10 @@ const setupGlobalTooltips = () => {
   font-size: 0.9rem;
 }
 
+.nav-item.settings-item {
+  margin-top: auto;
+}
+
 .nav-item:hover {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text-main);
@@ -227,14 +227,14 @@ const setupGlobalTooltips = () => {
   padding-left: 9px;
 }
 
-.nav-icon {
+.nav-item .icon {
   font-size: 1.1rem;
   width: 20px;
   text-align: center;
 }
 
-.mt-auto {
-  margin-top: auto;
+.nav-item .label {
+  flex: 1;
 }
 
 .connection-status {

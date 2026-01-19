@@ -48,12 +48,12 @@ const currentButtons = computed(() => store.status?.buttons ?? 0);
 const analogValues = computed(() => store.status?.adc ?? [0, 0, 0, 0, 0, 0, 0, 0]);
 
 const ffbEnabled = computed({
-  get: () => store.effects?.enabled === 1,
-  set: (val) => store.updateFX({ enabled: val ? 1 : 0 })
+  get: () => store.hardware?.force_enabled === 1,
+  set: (val) => store.updateHW({ force_enabled: val ? 1 : 0 })
 });
 
 const toggleFFB = async (val: boolean) => {
-  await store.updateFX({ enabled: val ? 1 : 0 });
+  await store.updateHW({ force_enabled: val ? 1 : 0 });
 };
 
 const mockLogs = ref([
@@ -68,26 +68,26 @@ const mockLogs = ref([
   padding: var(--content-padding);
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .top-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .monitor-controls {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 .control-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  padding: 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -101,15 +101,15 @@ const mockLogs = ref([
 }
 
 .control-group .label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-main);
 }
 
 .status-badge {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 800;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 20px;
   background: rgba(255, 0, 0, 0.1);
   color: var(--danger);
@@ -124,7 +124,7 @@ const mockLogs = ref([
 .middle-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
 .bottom-row {

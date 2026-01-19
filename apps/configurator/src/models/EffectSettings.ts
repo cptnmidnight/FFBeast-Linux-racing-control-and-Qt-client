@@ -8,5 +8,4 @@ export interface EffectSettings {
     direct_x_periodic_strength: number;
     direct_x_spring_strength: number;
     direct_x_constant_direction: number;
-    enabled: number;
 }

@@ -1,24 +1,20 @@
 <template>
   <div class="buttons-tab">
-    <div class="grid-layout">
-      <!-- Live Monitoring -->
-      <ButtonsGrid :buttons="currentButtons" />
-
-      <!-- Button Configuration -->
-      <BaseCard :title="$t('group_buttons')">
-        <div class="buttons-config-grid">
-          <div v-for="(_, index) in buttonModes.length" :key="index" class="button-config-item">
-            <span class="btn-idx-label">{{ $t('btn_label') }} {{ index + 1 }}</span>
-            <BaseSelect 
-              v-model="buttonModes[index]" 
-              :options="modeOptions" 
-              class="compact"
-              :use-i18n="true"
-              @update:model-value="save"
-            />
-          </div>
-        </div>
-      </BaseCard>
+    <div class="buttons-grid">
+      <div 
+        v-for="index in 32" 
+        :key="index" 
+        class="button-card"
+      >
+        <span class="btn-label">{{ $t('btn_label') }} {{ index }}</span>
+        <BaseSelect 
+          :model-value="buttonModes[index - 1]" 
+          :options="modeOptions" 
+          class="compact"
+          :use-i18n="true"
+          @update:model-value="v => updateButtonMode(index - 1, v)"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -26,12 +22,9 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useHardwareStore } from '../../stores/hardware';
-import BaseCard from '../common/BaseCard.vue';
 import BaseSelect from '../common/BaseSelect.vue';
-import ButtonsGrid from '../monitor/ButtonsGrid.vue';
 
 const store = useHardwareStore();
-const currentButtons = computed(() => store.status?.buttons ?? 0);
 const buttonModes = computed(() => store.gpio?.button_mode ?? []);
 
 const modeOptions = [
@@ -41,11 +34,18 @@ const modeOptions = [
   { label: 'btn_mode_pulse', value: 3 },
 ];
 
-const save = async () => {
+const updateButtonMode = async (index: number, value: number) => {
+  console.log(`[ButtonsTab] Button ${index + 1} mode changed to:`, value, `(${modeOptions.find(m => m.value === value)?.label})`);
+  
   if (store.gpio) {
+    const newModes = [...buttonModes.value];
+    newModes[index] = value;
+    
     await store.updateGPIO({
-      button_mode: buttonModes.value
+      button_mode: newModes
     });
+    
+    console.log(`[ButtonsTab] Updated button_mode array:`, newModes);
   }
 };
 </script>
@@ -55,35 +55,64 @@ const save = async () => {
   padding: var(--content-padding);
 }
 
-.grid-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.buttons-config-grid {
+.buttons-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 0.75rem;
 }
 
-.button-config-item {
+.button-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.02);
-  padding: 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--border);
+  gap: 0.5rem;
+  align-items: center;
+  transition: all 0.2s;
 }
 
-.btn-idx-label {
-  font-size: 0.7rem;
-  color: var(--text-dim);
+.button-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent-muted);
+}
+
+.btn-label {
+  font-size: 0.8rem;
   font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  line-height: 1;
 }
 
 .compact {
   margin-bottom: 0 !important;
+  width: 100%;
+}
+
+.compact :deep(select) {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-main);
+  width: 100%;
+  font-size: 0.75rem;
+  padding: 6px 8px;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.compact :deep(select):hover {
+  border-color: var(--accent);
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.compact :deep(select):focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-muted);
+  outline: none;
 }
 </style>

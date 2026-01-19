@@ -270,7 +270,8 @@ pub fn run() {
                         last_read_failed = false;
                     }
 
-                    std::thread::sleep(std::time::Duration::from_millis(16));
+                    // Poll at ~120Hz for smoother wheel updates
+                    std::thread::sleep(std::time::Duration::from_millis(8));
                 }
             });
             Ok(())

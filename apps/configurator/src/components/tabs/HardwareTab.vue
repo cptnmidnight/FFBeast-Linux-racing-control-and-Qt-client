@@ -3,6 +3,11 @@
     <div class="grid-layout">
       <!-- Motor Limits -->
       <BaseCard :title="$t('group_motor')">
+        <BaseSwitch 
+          v-model="ffbEnabled" 
+          :label="$t('ffb_active_label')" 
+          @update:model-value="toggleFFB"
+        />
         <BaseSlider 
           v-model="hardware.power_limit" 
           :label="$t('setting_power_limit')" 
@@ -25,7 +30,7 @@
       </BaseCard>
 
       <!-- Mechanical Config -->
-      <BaseCard title="Mechanical Config">
+      <BaseCard :title="$t('setting_mech_config')">
         <BaseSlider 
           v-model="hardware.pole_pairs" 
           :label="$t('setting_pole_pairs')" 
@@ -57,7 +62,7 @@
       </BaseCard>
 
       <!-- Calibration -->
-      <BaseCard title="Calibration">
+      <BaseCard :title="$t('setting_calibration')">
         <BaseSlider 
           v-model="hardware.calibration_speed" 
           :label="$t('setting_calibration_speed')" 
@@ -112,11 +117,13 @@ const hardware = reactive({
   calibration_magnitude: store.hardware?.calibration_magnitude ?? 50,
   proportional_gain: store.hardware?.proportional_gain ?? 100,
   integral_gain: store.hardware?.integral_gain ?? 0,
+  force_enabled: store.hardware?.force_enabled ?? 1,
 });
 
 const encoderDir = ref(false);
 const forceDir = ref(false);
 const debugTorque = ref(false);
+const ffbEnabled = ref(true);
 
 const syncFromStore = () => {
   if (store.hardware) {
@@ -124,6 +131,7 @@ const syncFromStore = () => {
     encoderDir.value = store.hardware.encoder_direction === 1;
     forceDir.value = store.hardware.force_direction === 1;
     debugTorque.value = store.hardware.debug_torque === 1;
+    ffbEnabled.value = store.hardware.force_enabled === 1;
   }
 };
 
@@ -133,6 +141,7 @@ watch(() => store.hardware, syncFromStore, { deep: true });
 const saveHardware = () => {
   store.updateHW({
     ...hardware,
+    force_enabled: ffbEnabled.value ? 1 : 0,
     encoder_direction: encoderDir.value ? 1 : 0,
     force_direction: forceDir.value ? 1 : 0,
     debug_torque: debugTorque.value ? 1 : 0,
@@ -140,6 +149,11 @@ const saveHardware = () => {
 };
 
 const handleSwitches = () => {
+  saveHardware();
+};
+
+const toggleFFB = async (val: boolean) => {
+  ffbEnabled.value = val;
   saveHardware();
 };
 </script>

@@ -15,13 +15,21 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useHardwareStore } from '../../stores/hardware';
 
 const props = defineProps<{
   position: number;
 }>();
 
-const currentPosition = computed(() => props.position);
-const rotationDegrees = computed(() => currentPosition.value); // Map 1:1 for now
+const store = useHardwareStore();
+
+// Calculate angle using motion_range from effect settings
+// Formula from legacy: angle = (position / 10000.0) * (range / 2.0)
+const motionRange = computed(() => store.effects?.motion_range || 900);
+const rotationDegrees = computed(() => {
+  return (props.position / 10000.0) * (motionRange.value / 2.0);
+});
+const currentPosition = computed(() => rotationDegrees.value.toFixed(1));
 </script>
 
 <style scoped>
@@ -29,24 +37,24 @@ const rotationDegrees = computed(() => currentPosition.value); // Map 1:1 for no
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 250px;
+  min-height: 200px;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  padding: 1rem;
   backdrop-filter: blur(10px);
 }
 
 .wheel-container {
   position: relative;
-  width: 200px;
-  height: 200px;
+  width: 160px;
+  height: 160px;
 }
 
 .wheel-svg {
   width: 100%;
   height: 100%;
-  transition: transform 0.05s linear;
+  will-change: transform;
 }
 
 .steering-wheel {

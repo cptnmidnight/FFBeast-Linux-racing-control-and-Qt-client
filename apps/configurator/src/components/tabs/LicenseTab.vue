@@ -12,6 +12,11 @@
             <code>{{ deviceId }}</code>
             <button class="btn-icon" @click="copyId" :title="$t('tooltip_copy_id')">📋</button>
           </div>
+          <div v-if="serialKey" class="id-row">
+            <span class="label">{{ $t('serial_key') }}:</span>
+            <code>{{ serialKey }}</code>
+            <button class="btn-icon" @click="copySerialKey" :title="$t('tooltip_copy_serial')">📋</button>
+          </div>
         </div>
       </div>
 
@@ -43,10 +48,16 @@ const ui = useUIStore();
 const isLicensed = computed(() => store.status?.is_registered ?? false);
 const licenseKey = ref('');
 const deviceId = computed(() => formatHexArray(store.status?.device_id));
+const serialKey = computed(() => formatHexArray(store.status?.serial_key));
 
 const copyId = async () => {
   await navigator.clipboard.writeText(deviceId.value);
   ui.showToast('ID copied to clipboard', 'info');
+};
+
+const copySerialKey = async () => {
+  await navigator.clipboard.writeText(serialKey.value);
+  ui.showToast('Serial key copied to clipboard', 'info');
 };
 
 const activate = async () => {

@@ -6,14 +6,14 @@
         <BaseSelect 
           v-model="language" 
           :options="langOptions" 
-          label="Interface Language"
+          :label="$t('setting_language')"
           @update:model-value="changeLang"
         />
         
         <BaseSelect 
           v-model="uiStore.settings.fontFamily" 
           :options="fontOptions" 
-          label="UI Font Family"
+          :label="$t('setting_ui_font')"
           @update:model-value="applyFont"
         />
         
@@ -40,16 +40,16 @@
       </BaseCard>
 
       <!-- Toast Settings -->
-      <BaseCard title="Toast Notifications">
+      <BaseCard :title="$t('setting_toast_notifications')">
         <BaseSelect 
           v-model="uiStore.settings.toastPosition" 
           :options="toastPositionOptions" 
-          label="Toast Position"
+          :label="$t('setting_toast_position')"
         />
         
         <BaseSlider 
           v-model="uiStore.settings.toastMargin" 
-          label="Toast Margin (px)" 
+          :label="$t('setting_toast_margin')" 
           :min="10" 
           :max="100" 
         />
@@ -63,18 +63,18 @@
             <span class="info-value">v2.0.0-beta</span>
           </div>
           <div class="info-row">
-            <span class="info-label">Build Date</span>
+            <span class="info-label">{{ $t('setting_build_date') }}</span>
             <span class="info-value">2026-01-18</span>
           </div>
           <div class="info-row">
-            <span class="info-label">Platform</span>
+            <span class="info-label">{{ $t('setting_platform') }}</span>
             <span class="info-value">Linux (Tauri)</span>
           </div>
         </div>
         <template #footer>
           <div class="footer-links">
-            <a href="#">Github Repository</a>
-            <a href="#">Documentation</a>
+            <a href="#">{{ $t('link_github') }}</a>
+            <a href="#">{{ $t('link_docs') }}</a>
           </div>
         </template>
       </BaseCard>

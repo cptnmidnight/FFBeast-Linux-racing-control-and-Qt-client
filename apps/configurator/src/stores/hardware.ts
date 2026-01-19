@@ -72,7 +72,7 @@ export const useHardwareStore = defineStore('hardware', {
         async startPolling() {
             if (!this.isConnected) return;
 
-            // Limit polling frequency to ~60Hz
+            // Poll at maximum speed using requestAnimationFrame (~120Hz backend updates)
             const poll = async () => {
                 if (!this.isConnected) return;
                 try {

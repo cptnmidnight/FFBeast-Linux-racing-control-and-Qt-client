@@ -2,12 +2,12 @@
   <div class="tools-tab">
     <div class="grid-layout">
       <!-- FFB Diagnostics -->
-      <BaseCard title="FFB Diagnostics">
-        <p class="description">Live manual Force Feedback testing. Sliders reset to 0 when released.</p>
+      <BaseCard :title="$t('tool_ffb_diagnostics')">
+        <p class="description">{{ $t('tool_ffb_desc') }}</p>
         <div class="test-controls">
           <BaseSlider 
             v-model="testValues.constant" 
-            label="Constant Force" 
+            :label="$t('tool_constant_force')" 
             :min="-100" 
             :max="100" 
             suffix="%"
@@ -16,7 +16,7 @@
           />
           <BaseSlider 
             v-model="testValues.sine" 
-            label="Sine Wave" 
+            :label="$t('tool_sine_wave')" 
             :min="0" 
             :max="100" 
             suffix="%"
@@ -25,7 +25,7 @@
           />
           <BaseSlider 
             v-model="testValues.damper" 
-            label="Damping Effect" 
+            :label="$t('tool_damping_effect')" 
             :min="0" 
             :max="100" 
             suffix="%"
@@ -34,17 +34,17 @@
           />
         </div>
         <div class="tools-grid">
-          <button class="tool-btn stop" @click="stopAll">Stop All Tests</button>
+          <button class="tool-btn stop" @click="stopAll">{{ $t('tool_stop_all') }}</button>
         </div>
       </BaseCard>
 
       <!-- Maintenance -->
-      <BaseCard title="Maintenance">
-        <p class="description">Hardware reset and recovery options.</p>
+      <BaseCard :title="$t('tool_maintenance')">
+        <p class="description">{{ $t('tool_maintenance_desc') }}</p>
         <div class="tools-grid">
-          <button class="tool-btn" @click="recalibrateCenter">Recalibrate Center</button>
-          <button class="tool-btn warn" @click="enterDfu">Enter DFU Mode</button>
-          <button class="tool-btn danger" @click="factoryReset">Factory Reset</button>
+          <button class="tool-btn" @click="recalibrateCenter">{{ $t('tool_recalibrate') }}</button>
+          <button class="tool-btn warn" @click="enterDfu">{{ $t('tool_enter_dfu') }}</button>
+          <button class="tool-btn danger" @click="factoryReset">{{ $t('tool_factory_reset') }}</button>
         </div>
       </BaseCard>
     </div>

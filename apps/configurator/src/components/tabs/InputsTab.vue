@@ -1,102 +1,94 @@
 <template>
   <div class="inputs-tab">
-    <div class="grid-layout">
-      <!-- Live Monitoring -->
-      <BaseCard :title="$t('analog_inputs_title')">
-        <AnalogMonitor :values="analogValues" />
-      </BaseCard>
-
-      <!-- Axis Calibration -->
-      <div class="axes-grid">
-        <BaseCard v-for="index in activeIndices" :key="index">
-          <template #header>
-            <div class="axis-header">
-              <div class="axis-info">
-                <span class="axis-label">{{ getAxisLabel(index) }}</span>
-                <span class="axis-name">{{ getAxisName(index) }}</span>
-              </div>
-              <button class="icon-btn" @click="editMapping(index)" :data-help="'help_edit_mapping'">⚙️</button>
-            </div>
-          </template>
-
-          <div class="calibration-row">
-            <div class="monitor-mini">
-              <div class="bar-bg">
-                <div class="bar-fill" :style="{ height: (analogValues[index] / 4095 * 100) + '%' }"></div>
-              </div>
-              <span class="raw-val">{{ analogValues[index] }}</span>
-            </div>
-            
-            <div class="config-grid" v-if="index < 3">
-              <BaseSlider 
-                :model-value="store.adc?.raxis_min[index] ?? 0" 
-                :label="$t('setting_min')" 
-                :max="32767" 
-                @update:model-value="v => updateMin(index, v)"
-              />
-              <BaseSlider 
-                :model-value="store.adc?.raxis_max[index] ?? 32767" 
-                :label="$t('setting_max')" 
-                :max="32767" 
-                @update:model-value="v => updateMax(index, v)"
-              />
-              <BaseSwitch 
-                :model-value="store.adc?.raxis_invert[index] === 1" 
-                :label="$t('setting_axis_invert')" 
-                @update:model-value="v => updateInvert(index, v)"
-              />
-            </div>
-            <div v-else class="adc-info">
-              <p class="desc">Hardware calibration only for primary axes.</p>
-            </div>
+    <div class="axes-grid">
+      <div v-for="index in activeIndices" :key="index" class="axis-card">
+        <div class="axis-header">
+          <div class="axis-info">
+            <span class="axis-label">{{ getAxisLabel(index) }}</span>
+            <input 
+              type="text" 
+              v-model="axisNames[index]" 
+              class="axis-name-input"
+              :placeholder="DEFAULT_NAMES[index]"
+              @blur="saveAxisName"
+            />
           </div>
-        </BaseCard>
+          <button class="icon-btn" @click="editMapping(index)" :data-help="'help_edit_mapping'">⚙️ {{ $t('btn_edit_mapping') }}</button>
+        </div>
+        
+        <div class="adc-config-section" v-if="index < 3">
+          <BaseSlider 
+            :model-value="store.adc?.raxis_min[index] ?? 0" 
+            :label="$t('setting_min')" 
+            :max="32767" 
+            @update:model-value="v => updateMin(index, v)"
+          />
+          <BaseSlider 
+            :model-value="store.adc?.raxis_max[index] ?? 32767" 
+            :label="$t('setting_max')" 
+            :max="32767" 
+            @update:model-value="v => updateMax(index, v)"
+          />
+          <BaseSwitch 
+            :model-value="store.adc?.raxis_invert[index] === 1" 
+            :label="$t('setting_axis_invert')" 
+            :help="$t('help_axis_invert')"
+            @update:model-value="v => updateInvert(index, v)"
+          />
+        </div>
+        <div v-else class="adc-info">
+          <p>Hardware calibration only for primary axes.</p>
+        </div>
       </div>
     </div>
 
     <!-- Mapping Modal -->
     <BaseModal 
       :show="showModal" 
-      :title="`Edit Axis ${editingIdx} Mapping`"
+      :title="$t('axis_edit_title') + ' ' + (editingIdx !== null ? (editingIdx + 1) : '')"
       @close="closeModal"
     >
       <div v-if="editingIdx !== null" class="modal-form">
         <div class="form-group">
-          <label>Custom Name</label>
+          <label>{{ $t('axis_custom_name') }}</label>
           <input type="text" v-model="axisNames[editingIdx]" class="base-input">
         </div>
 
-        <div class="section-divider">Joystick Mapping</div>
+        <div class="section-divider">{{ $t('axis_joystick_mapping') }}</div>
         <div class="form-row">
           <BaseSelect 
             v-model="mappings[editingIdx].btnLow" 
             :options="buttonOptions" 
-            label="Button Low (0%)"
+            :label="$t('axis_button_low')"
+            :use-i18n="true"
           />
           <BaseSelect 
             v-model="mappings[editingIdx].btnHigh" 
             :options="buttonOptions" 
-            label="Button High (100%)"
+            :label="$t('axis_button_high')"
+            :use-i18n="true"
           />
         </div>
 
-        <div class="section-divider">Keyboard Mapping</div>
+        <div class="section-divider">{{ $t('axis_keyboard_mapping') }}</div>
         <div class="form-row">
           <BaseSelect 
             v-model="mappings[editingIdx].keyLow" 
             :options="keyOptions" 
-            label="Key Low"
+            :label="$t('axis_key_low')"
+            :use-i18n="true"
           />
           <BaseSelect 
             v-model="mappings[editingIdx].keyHigh" 
             :options="keyOptions" 
-            label="Key High"
+            :label="$t('axis_key_high')"
+            :use-i18n="true"
           />
         </div>
       </div>
       <template #footer>
-        <button class="btn-outline" @click="closeModal">Cancel</button>
-        <button class="btn-primary" @click="saveMapping">Save Changes</button>
+        <button class="btn-outline" @click="closeModal">{{ $t('modal_cancel') }}</button>
+        <button class="btn-primary" @click="saveMapping">{{ $t('modal_save') }}</button>
       </template>
     </BaseModal>
   </div>
@@ -105,12 +97,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useHardwareStore } from '../../stores/hardware';
-import BaseCard from '../common/BaseCard.vue';
 import BaseSlider from '../common/BaseSlider.vue';
 import BaseSwitch from '../common/BaseSwitch.vue';
 import BaseModal from '../common/BaseModal.vue';
 import BaseSelect from '../common/BaseSelect.vue';
-import AnalogMonitor from '../monitor/AnalogMonitor.vue';
 import type { AxisMapping } from '../../models/AxisMapping';
 
 const store = useHardwareStore();
@@ -176,16 +166,17 @@ const updateInvert = (idx: number, val: boolean) => {
   if (!store.adc) return;
   const invs = [...store.adc.raxis_invert];
   invs[idx] = val ? 1 : 0;
+  console.log(`[InputsTab] Updating axis ${idx} invert to:`, val, '(value:', invs[idx], ')');
   store.updateADC({ raxis_invert: invs });
 };
 
 const buttonOptions = [
-  { label: 'None', value: null },
+  { label: 'option_none', value: null },
   ...Array.from({ length: 32 }, (_, i) => ({ label: `Button ${i + 1}`, value: i }))
 ];
 
 const KEY_LIST = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "Up", "Down", "Left", "Right", "Space", "Enter", "Tab", "Shift", "Ctrl", "Alt", "Esc"];
-const keyOptions = [{ label: 'None', value: '' }, ...KEY_LIST.map(k => ({ label: k, value: k }))];
+const keyOptions = [{ label: 'option_none', value: '' }, ...KEY_LIST.map(k => ({ label: k, value: k }))];
 
 const editMapping = (index: number) => {
   editingIdx.value = index;
@@ -203,6 +194,10 @@ const saveMapping = () => {
   closeModal();
 };
 
+const saveAxisName = () => {
+  localStorage.setItem('ffbeast_axis_names', JSON.stringify(axisNames.value));
+};
+
 onMounted(initConfig);
 </script>
 
@@ -211,23 +206,25 @@ onMounted(initConfig);
   padding: var(--content-padding);
 }
 
-.grid-layout {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
 .axes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.axis-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  backdrop-filter: blur(10px);
 }
 
 .axis-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  width: 100%;
+  margin-bottom: 1rem;
 }
 
 .axis-info {
@@ -247,17 +244,42 @@ onMounted(initConfig);
   color: var(--accent);
 }
 
+.axis-name-input {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid transparent;
+  outline: none;
+  padding: 2px 4px;
+  transition: all 0.2s;
+  max-width: 200px;
+}
+
+.axis-name-input:hover {
+  border-bottom-color: var(--border);
+}
+
+.axis-name-input:focus {
+  border-bottom-color: var(--accent);
+  background: rgba(255, 255, 255, 0.02);
+}
+
 .icon-btn {
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.85rem;
   opacity: 0.6;
   transition: opacity 0.2s;
+  padding: 4px 8px;
+  color: var(--text-dim);
 }
 
 .icon-btn:hover {
   opacity: 1;
+  color: var(--accent);
 }
 
 .calibration-row {
@@ -305,11 +327,18 @@ onMounted(initConfig);
   gap: 0.5rem;
 }
 
+.adc-config-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
 .adc-info {
-  flex: 1;
   color: var(--text-dim);
   font-style: italic;
   font-size: 0.8rem;
+  text-align: center;
+  padding: 1rem;
 }
 
 .modal-form {
