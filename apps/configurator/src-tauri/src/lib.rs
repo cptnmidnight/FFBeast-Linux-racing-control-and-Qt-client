@@ -110,6 +110,48 @@ fn update_adc_settings(
         .map_err(|e| e.to_string())
 }
 
+#[derive(serde::Serialize, serde::Deserialize)]
+struct HandshakeResponse {
+    status: ffbeast_controller::WheelStatus,
+    fx: EffectSettings,
+    hw: HardwareSettings,
+    gpio: GpioSettings,
+    adc: AdcSettings,
+}
+
+#[tauri::command]
+#[instrument(skip(hardware), err)]
+fn get_handshake(
+    hardware: State<'_, Arc<HardwareService>>,
+) -> Result<HandshakeResponse, String> {
+    // Try to connect if not already connected
+    if !hardware.is_connected() {
+        hardware.connect().map_err(|e| e.to_string())?;
+    }
+
+    let status = hardware.read_status().map_err(|e| e.to_string())?;
+    let fx = hardware.read_effect_settings().map_err(|e| e.to_string())?;
+    let hw = hardware.read_hardware_settings().map_err(|e| e.to_string())?;
+    let gpio = hardware.read_gpio_settings().map_err(|e| e.to_string())?;
+    let adc = hardware.read_adc_settings().map_err(|e| e.to_string())?;
+
+    Ok(HandshakeResponse {
+        status,
+        fx,
+        hw,
+        gpio,
+        adc,
+    })
+}
+
+#[tauri::command]
+#[instrument(skip(hardware), err)]
+fn get_status(
+    hardware: State<'_, Arc<HardwareService>>,
+) -> Result<ffbeast_controller::WheelStatus, String> {
+    hardware.read_status().map_err(|e| e.to_string())
+}
+
 #[tauri::command]
 #[instrument(skip(hardware), err)]
 fn activate_license(
@@ -181,6 +223,10 @@ pub fn run() {
 
     info!("Starting FFBeast UI");
 
+    // Fix for Linux WebKit rendering issue (Blank screen)
+    #[cfg(target_os = "linux")]
+    std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
+
     let hardware = Arc::new(HardwareService::new());
     let hardware_clone = hardware.clone();
 
@@ -232,6 +278,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             check_hardware,
             connect_hardware,
+            get_handshake,
+            get_status,
             reboot_device,
             reset_center,
             save_settings,

@@ -3,7 +3,7 @@
     <div class="slider-header">
       <div class="label-group">
         <label v-if="label">{{ label }}</label>
-        <div v-if="help" class="help-icon" :title="help">?</div>
+        <div v-if="help" class="help-icon" :data-help="help">?</div>
       </div>
       <div class="input-group">
         <input 

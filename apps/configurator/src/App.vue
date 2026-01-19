@@ -2,22 +2,34 @@
   <div class="app-container">
     <nav class="sidebar">
       <div class="brand">
-        <!-- Logo will be added later -->
+        <img src="./assets/logo_app.png" alt="FFBeast Logo" class="brand-logo">
         <span class="brand-name">FFBeast UI</span>
       </div>
       
-      <ul class="nav-links">
-        <li 
+      <div class="nav-items">
+        <div 
           v-for="tab in tabs" 
-          :key="tab.id"
-          :class="['nav-item', { active: currentTab === tab.id }, tab.class || '']"
+          :key="tab.id" 
+          :class="['nav-item', { active: currentTab === tab.id }, tab.class]" 
           @click="currentTab = tab.id"
         >
-          <span class="nav-icon">{{ tab.icon }}</span>
-          <span class="nav-label">{{ $t(tab.label) }}</span>
-        </li>
-      </ul>
+          <span class="icon">{{ tab.icon }}</span>
+          <span class="label">{{ $t(tab.label) }}</span>
+        </div>
+      </div>
 
+      <!-- Connection Status in Sidebar -->
+      <div class="connection-status" :class="{ connected: store.isConnected, error: store.lastError }">
+        <div class="status-indicator"></div>
+        <div class="status-text">
+          <span v-if="store.isConnecting">Connecting...</span>
+          <span v-else-if="store.isConnected">{{ $t('status_connected') }}</span>
+          <span v-else>{{ $t('status_disconnected') }}</span>
+        </div>
+        <div v-if="store.lastError" class="error-text" :title="store.lastError">
+          {{ store.lastError.substring(0, 30) }}...
+        </div>
+      </div>
       <div class="sidebar-footer">
         <div :class="['status-indicator', { connected: store.isConnected, disconnected: !store.isConnected }]">
           <div class="status-dot"></div>
@@ -55,6 +67,9 @@
         </Transition>
       </div>
     </main>
+
+    <ToastContainer />
+    <BaseTooltip />
   </div>
 </template>
 
@@ -72,8 +87,14 @@ import ButtonsTab from './components/tabs/ButtonsTab.vue';
 import InputsTab from './components/tabs/InputsTab.vue';
 import LogsTab from './components/tabs/LogsTab.vue';
 import SettingsTab from './components/tabs/SettingsTab.vue';
+import ToastContainer from './components/common/ToastContainer.vue';
+import BaseTooltip from './components/common/BaseTooltip.vue';
+import { useUIStore } from './stores/ui';
+import { useI18n } from 'vue-i18n';
 
 const store = useHardwareStore();
+const ui = useUIStore();
+const { t } = useI18n();
 const currentTab = ref('monitor');
 
 const tabs = [
@@ -104,7 +125,34 @@ const handleSave = () => store.saveToEeprom();
 
 onMounted(() => {
   store.init();
+  setupGlobalTooltips();
 });
+
+const setupGlobalTooltips = () => {
+  document.addEventListener('mouseover', (e) => {
+    const target = (e.target as HTMLElement).closest('[data-help]');
+    if (target) {
+      const helpKey = target.getAttribute('data-help');
+      if (helpKey) {
+        ui.showTooltip(t(helpKey), e.clientX, e.clientY);
+      }
+    }
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (ui.tooltip.show) {
+      ui.tooltip.x = e.clientX;
+      ui.tooltip.y = e.clientY;
+    }
+  });
+
+  document.addEventListener('mouseout', (e) => {
+    const target = (e.target as HTMLElement).closest('[data-help]');
+    if (target) {
+      ui.hideTooltip();
+    }
+  });
+};
 </script>
 
 <style scoped>
@@ -126,7 +174,17 @@ onMounted(() => {
 .brand {
   padding: 1.5rem 1rem;
   border-bottom: 1px solid var(--border);
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.brand-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px var(--accent-glow));
 }
 
 .brand-name {
@@ -177,6 +235,55 @@ onMounted(() => {
 
 .mt-auto {
   margin-top: auto;
+}
+
+.connection-status {
+  padding: 12px;
+  margin: 8px;
+  background: rgba(255, 0, 0, 0.1);
+  border: 1px solid rgba(255, 0, 0, 0.3);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+}
+
+.connection-status.connected {
+  background: rgba(0, 255, 0, 0.1);
+  border-color: rgba(0, 255, 0, 0.3);
+}
+
+.connection-status .status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  display: inline-block;
+  margin-right: 6px;
+  animation: pulse 2s infinite;
+}
+
+.connection-status.connected .status-indicator {
+  background: var(--success);
+  animation: none;
+}
+
+.connection-status .status-text {
+  color: var(--text-main);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.connection-status .error-text {
+  color: var(--danger);
+  font-size: 0.65rem;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
 
 .sidebar-footer {

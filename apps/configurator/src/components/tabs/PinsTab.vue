@@ -1,15 +1,14 @@
 <template>
   <div class="pins-tab">
     <BaseCard :title="$t('group_pins')">
-      <div class="pins-grid">
-        <div v-for="(_, index) in 16" :key="index" class="pin-item">
-          <div class="pin-header">
-            <span class="pin-label">GPIO {{ index }}</span>
-          </div>
+      <div class="pins-list">
+        <div v-for="(_, index) in pinCount" :key="index" class="pin-row">
+          <span class="pin-label">{{ $t('pin_label') }} {{ index }}</span>
           <BaseSelect 
             v-model="pinModes[index]" 
             :options="modeOptions" 
             class="compact"
+            :use-i18n="true"
             @update:model-value="save"
           />
         </div>
@@ -19,30 +18,35 @@
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue';
+import { computed } from 'vue';
 import { useHardwareStore } from '../../stores/hardware';
 import BaseCard from '../common/BaseCard.vue';
 import BaseSelect from '../common/BaseSelect.vue';
 
 const store = useHardwareStore();
-const pinModes = reactive(store.gpio?.pin_mode ?? Array(16).fill(0));
+const pinModes = computed(() => store.gpio?.pin_mode ?? []);
+const pinCount = computed(() => pinModes.value.length);
 
 const modeOptions = [
-  { label: 'None', value: 0 },
-  { label: 'Digital Input', value: 1 },
-  { label: 'Analog Input', value: 2 },
-  { label: 'SPI CS', value: 3 },
-  { label: 'SPI SCK', value: 4 },
-  { label: 'SPI MISO', value: 5 },
-  { label: 'Enable Effects', value: 6 },
-  { label: 'Center Reset', value: 7 },
-  { label: 'Braking PWM', value: 8 },
-  { label: 'Effect LED', value: 9 },
-  { label: 'Reboot', value: 10 },
+  { label: 'pin_mode_none', value: 0 },
+  { label: 'pin_mode_gpio', value: 1 },
+  { label: 'pin_mode_analog', value: 2 },
+  { label: 'pin_mode_spi_cs', value: 3 },
+  { label: 'pin_mode_spi_sck', value: 4 },
+  { label: 'pin_mode_spi_miso', value: 5 },
+  { label: 'pin_mode_enable_effects', value: 6 },
+  { label: 'pin_mode_center_reset', value: 7 },
+  { label: 'pin_mode_braking_pwm', value: 8 },
+  { label: 'pin_mode_effect_led', value: 9 },
+  { label: 'pin_mode_reboot', value: 10 },
 ];
 
-const save = () => {
-  // store.updateGPIO({ pin_mode: pinModes });
+const save = async () => {
+  if (store.gpio) {
+    await store.updateGPIO({
+      pin_mode: pinModes.value
+    });
+  }
 };
 </script>
 

@@ -9,12 +9,22 @@
           label="Interface Language"
           @update:model-value="changeLang"
         />
+        
+        <BaseSelect 
+          v-model="uiStore.settings.fontFamily" 
+          :options="fontOptions" 
+          label="UI Font Family"
+          @update:model-value="applyFont"
+        />
+        
         <BaseSlider 
-          v-model="fontSize" 
+          v-model="uiStore.settings.fontSize" 
           :label="$t('settings_font_size')" 
           :min="12" 
           :max="24" 
+          @update:model-value="applyFontSize"
         />
+        
         <div class="theme-selector">
           <label>{{ $t('settings_accent_color') }}</label>
           <div class="color-grid">
@@ -27,6 +37,22 @@
             ></div>
           </div>
         </div>
+      </BaseCard>
+
+      <!-- Toast Settings -->
+      <BaseCard title="Toast Notifications">
+        <BaseSelect 
+          v-model="uiStore.settings.toastPosition" 
+          :options="toastPositionOptions" 
+          label="Toast Position"
+        />
+        
+        <BaseSlider 
+          v-model="uiStore.settings.toastMargin" 
+          label="Toast Margin (px)" 
+          :min="10" 
+          :max="100" 
+        />
       </BaseCard>
 
       <!-- App Info -->
@@ -42,7 +68,7 @@
           </div>
           <div class="info-row">
             <span class="info-label">Platform</span>
-            <span class="info-value">Windows (Tauri)</span>
+            <span class="info-value">Linux (Tauri)</span>
           </div>
         </div>
         <template #footer>
@@ -59,31 +85,62 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useUIStore } from '../../stores/ui';
 import BaseCard from '../common/BaseCard.vue';
 import BaseSelect from '../common/BaseSelect.vue';
 import BaseSlider from '../common/BaseSlider.vue';
 
 const { locale } = useI18n();
+const uiStore = useUIStore();
 
 const language = ref(locale.value);
-const fontSize = ref(16);
 
 const langOptions = [
   { label: 'English', value: 'en' },
   { label: 'Português (Brasil)', value: 'pt-BR' },
 ];
 
+const fontOptions = [
+  { label: 'Outfit', value: 'Outfit' },
+  { label: 'JetBrains Mono', value: 'JetBrains Mono' },
+  { label: 'System Default', value: 'system-ui' },
+];
+
+const toastPositionOptions = [
+  { label: 'Top Right', value: 'top-right' },
+  { label: 'Bottom Right', value: 'bottom-right' },
+  { label: 'Top Left', value: 'top-left' },
+  { label: 'Bottom Left', value: 'bottom-left' },
+];
+
+// Avoid semantic colors (success, error, warning)
 const accentColors = [
-  '#00d4ff', '#ff4757', '#00ff88', '#ffa502', '#e056fd'
+  '#00d4ff', // Cyan
+  '#e056fd', // Purple
+  '#0088ff', // Blue
+  '#00ccaa', // Teal (distinct from success)
+  '#ff6b9d', // Pink (distinct from error)
 ];
 
 const changeLang = (val: string) => {
   locale.value = val;
+  localStorage.setItem('ffbeast_language', val);
+};
+
+const applyFont = (val: string) => {
+  document.documentElement.style.setProperty('--font-main', val);
+  localStorage.setItem('ffbeast_font', val);
+};
+
+const applyFontSize = (val: number) => {
+  document.documentElement.style.fontSize = `${val}px`;
+  localStorage.setItem('ffbeast_font_size', String(val));
 };
 
 const setAccent = (color: string) => {
   document.documentElement.style.setProperty('--accent', color);
   document.documentElement.style.setProperty('--accent-glow', color + '66');
+  localStorage.setItem('ffbeast_accent', color);
 };
 </script>
 

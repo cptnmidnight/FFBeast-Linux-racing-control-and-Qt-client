@@ -1,21 +1,20 @@
 <template>
   <div class="buttons-tab">
     <div class="grid-layout">
-      <!-- Live Status -->
-      <BaseCard :title="$t('buttons_title')">
-        <ButtonsGrid :buttons="currentButtons" />
-      </BaseCard>
+      <!-- Live Monitoring -->
+      <ButtonsGrid :buttons="currentButtons" />
 
-      <!-- Digital Mapping -->
-      <BaseCard title="Digital Mapping">
-        <p class="description">Map physical buttons to virtual joystick buttons.</p>
-        <div class="mapping-list">
-          <div v-for="n in 12" :key="n" class="mapping-item">
-            <span class="index">#{{ n }}</span>
+      <!-- Button Configuration -->
+      <BaseCard :title="$t('group_buttons')">
+        <div class="buttons-config-grid">
+          <div v-for="(_, index) in buttonModes.length" :key="index" class="button-config-item">
+            <span class="btn-idx-label">{{ $t('btn_label') }} {{ index + 1 }}</span>
             <BaseSelect 
-              v-model="dummyMapping[n-1]" 
-              :options="buttonOptions" 
+              v-model="buttonModes[index]" 
+              :options="modeOptions" 
               class="compact"
+              :use-i18n="true"
+              @update:model-value="save"
             />
           </div>
         </div>
@@ -25,7 +24,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive } from 'vue';
+import { computed } from 'vue';
 import { useHardwareStore } from '../../stores/hardware';
 import BaseCard from '../common/BaseCard.vue';
 import BaseSelect from '../common/BaseSelect.vue';
@@ -33,14 +32,22 @@ import ButtonsGrid from '../monitor/ButtonsGrid.vue';
 
 const store = useHardwareStore();
 const currentButtons = computed(() => store.status?.buttons ?? 0);
+const buttonModes = computed(() => store.gpio?.button_mode ?? []);
 
-const dummyMapping = reactive(Array(12).fill(0));
-const buttonOptions = [
-  { label: 'Button 1', value: 0 },
-  { label: 'Button 2', value: 1 },
-  { label: 'Button 3', value: 2 },
-  // ...
+const modeOptions = [
+  { label: 'btn_mode_none', value: 0 },
+  { label: 'btn_mode_normal', value: 1 },
+  { label: 'btn_mode_inverted', value: 2 },
+  { label: 'btn_mode_pulse', value: 3 },
 ];
+
+const save = async () => {
+  if (store.gpio) {
+    await store.updateGPIO({
+      button_mode: buttonModes.value
+    });
+  }
+};
 </script>
 
 <style scoped>
@@ -49,41 +56,34 @@ const buttonOptions = [
 }
 
 .grid-layout {
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
 }
 
-.description {
-  font-size: 0.85rem;
-  color: var(--text-dim);
-  margin-bottom: 1rem;
-}
-
-.mapping-list {
+.buttons-config-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 1rem;
 }
 
-.mapping-item {
+.button-config-item {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  background: rgba(0,0,0,0.2);
-  padding: 4px 10px;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 10px;
   border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
 }
 
-.index {
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
+.btn-idx-label {
+  font-size: 0.7rem;
   color: var(--text-dim);
-  width: 30px;
+  font-weight: 600;
 }
 
 .compact {
   margin-bottom: 0 !important;
-  flex: 1;
 }
 </style>

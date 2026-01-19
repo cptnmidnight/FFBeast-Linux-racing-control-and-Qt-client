@@ -1,21 +1,49 @@
 <template>
   <div class="tools-tab">
     <div class="grid-layout">
+      <!-- FFB Diagnostics -->
       <BaseCard title="FFB Diagnostics">
-        <p class="description">Test Force Feedback effects manually.</p>
+        <p class="description">Live manual Force Feedback testing. Sliders reset to 0 when released.</p>
+        <div class="test-controls">
+          <BaseSlider 
+            v-model="testValues.constant" 
+            label="Constant Force" 
+            :min="-100" 
+            :max="100" 
+            suffix="%"
+            @update:model-value="(v: number) => updateFFB(1, v)"
+            @change="resetFFB(1)"
+          />
+          <BaseSlider 
+            v-model="testValues.sine" 
+            label="Sine Wave" 
+            :min="0" 
+            :max="100" 
+            suffix="%"
+            @update:model-value="(v: number) => updateFFB(2, v)"
+            @change="resetFFB(2)"
+          />
+          <BaseSlider 
+            v-model="testValues.damper" 
+            label="Damping Effect" 
+            :min="0" 
+            :max="100" 
+            suffix="%"
+            @update:model-value="(v: number) => updateFFB(3, v)"
+            @change="resetFFB(3)"
+          />
+        </div>
         <div class="tools-grid">
-          <button class="tool-btn" @click="testWave('spring')">Test Spring</button>
-          <button class="tool-btn" @click="testWave('sine')">Test Sine Wave</button>
-          <button class="tool-btn" @click="testWave('constant')">Test Constant</button>
-          <button class="tool-btn stop" @click="testWave('stop')">Stop All Tests</button>
+          <button class="tool-btn stop" @click="stopAll">Stop All Tests</button>
         </div>
       </BaseCard>
 
+      <!-- Maintenance -->
       <BaseCard title="Maintenance">
         <p class="description">Hardware reset and recovery options.</p>
         <div class="tools-grid">
-          <button class="tool-btn warn" @click="store.reboot()">Reboot Device</button>
-          <button class="tool-btn" @click="store.resetCenter()">Recalibrate Center</button>
+          <button class="tool-btn" @click="recalibrateCenter">Recalibrate Center</button>
+          <button class="tool-btn warn" @click="enterDfu">Enter DFU Mode</button>
           <button class="tool-btn danger" @click="factoryReset">Factory Reset</button>
         </div>
       </BaseCard>
@@ -24,18 +52,60 @@
 </template>
 
 <script setup lang="ts">
+import { reactive } from 'vue';
 import { useHardwareStore } from '../../stores/hardware';
+import { useUIStore } from '../../stores/ui';
 import BaseCard from '../common/BaseCard.vue';
+import BaseSlider from '../common/BaseSlider.vue';
 
 const store = useHardwareStore();
+const ui = useUIStore();
 
-const testWave = (type: string) => {
-  console.log('Testing wave...', type);
+const testValues = reactive({
+  constant: 0,
+  sine: 0,
+  damper: 0
+});
+
+const updateFFB = (type: number, val: number) => {
+  // Map % to 0..32767
+  const hwVal = (val / 100) * 32767;
+  store.sendFFBTest(type, hwVal);
+};
+
+const resetFFB = (type: number) => {
+  // Zero out values
+  if (type === 1) testValues.constant = 0;
+  if (type === 2) testValues.sine = 0;
+  if (type === 3) testValues.damper = 0;
+  store.sendFFBTest(type, 0);
+};
+
+const stopAll = () => {
+  testValues.constant = 0;
+  testValues.sine = 0;
+  testValues.damper = 0;
+  store.sendFFBTest(1, 0);
+  store.sendFFBTest(2, 0);
+  store.sendFFBTest(3, 0);
+  ui.showToast('All FFB tests stopped', 'info');
+};
+
+const recalibrateCenter = async () => {
+  await store.resetCenter();
+  ui.showToast('Center recalibrated!', 'success');
+};
+
+const enterDfu = async () => {
+  if (confirm('Enter DFU Mode? Device will disconnect and enter firmware update mode.')) {
+    await store.enterDfu();
+    ui.showToast('Switching to DFU...', 'warn');
+  }
 };
 
 const factoryReset = () => {
   if (confirm('Are you sure you want to reset all settings to factory defaults?')) {
-    console.log('Factory reset!');
+    ui.showToast('Factory reset not implemented in mock', 'warn');
   }
 };
 </script>

@@ -16,12 +16,14 @@
 </template>
 
 <script setup lang="ts">
+import { isBitSet } from '../../utils/format';
+
 const props = defineProps<{
   buttons: number;
 }>();
 
 const isButtonActive = (index: number) => {
-  return (props.buttons & (1 << index)) !== 0;
+  return isBitSet(props.buttons, index);
 };
 </script>
 

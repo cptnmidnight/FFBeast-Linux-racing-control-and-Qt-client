@@ -31,24 +31,39 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { useHardwareStore } from '../../stores/hardware';
+import { useUIStore } from '../../stores/ui';
+import { formatHexArray } from '../../utils/format';
 import BaseCard from '../common/BaseCard.vue';
 
-const isLicensed = ref(true); // Mocking
+const store = useHardwareStore();
+const ui = useUIStore();
+
+const isLicensed = computed(() => store.status?.is_registered ?? false);
 const licenseKey = ref('');
-const deviceId = ref('FF-BEAST-55B2-99A1');
+const deviceId = computed(() => formatHexArray(store.status?.device_id));
 
 const copyId = async () => {
   await navigator.clipboard.writeText(deviceId.value);
-  alert('ID copied!');
+  ui.showToast('ID copied to clipboard', 'info');
 };
 
-const activate = () => {
-  console.log('Activating...', licenseKey.value);
+const activate = async () => {
+  if (!licenseKey.value) {
+    ui.showToast('Please enter a serial key', 'error');
+    return;
+  }
+  try {
+    await store.activateLicense(licenseKey.value);
+    ui.showToast('License activated! Rebooting device...', 'success');
+  } catch (err) {
+    ui.showToast('Activation failed: ' + err, 'error');
+  }
 };
 
 const importFile = () => {
-  console.log('Importing license file...');
+  ui.showToast('Import from file not yet implemented', 'info');
 };
 </script>
 
