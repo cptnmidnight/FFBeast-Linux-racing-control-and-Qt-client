@@ -6,7 +6,7 @@ authors = ["SODevs"]
 edition = "2021"
 
 [lib]
-name = "sodevs_configurator_lib"
+name = "ffbeast_ui_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

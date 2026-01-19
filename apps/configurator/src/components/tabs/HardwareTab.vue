@@ -1,0 +1,164 @@
+<template>
+  <div class="hardware-tab">
+    <div class="grid-layout">
+      <!-- Motor Limits -->
+      <BaseCard :title="$t('group_motor')">
+        <BaseSlider 
+          v-model="hardware.power_limit" 
+          :label="$t('setting_power_limit')" 
+          :help="$t('help_power_limit')"
+          @update:model-value="saveHardware"
+        />
+        <BaseSlider 
+          v-model="hardware.braking_limit" 
+          :label="$t('setting_braking_limit')" 
+          :help="$t('help_braking_limit')"
+          @update:model-value="saveHardware"
+        />
+        <BaseSlider 
+          v-model="hardware.amplifier_gain" 
+          :label="$t('setting_amplifier_gain')" 
+          :help="$t('help_amplifier_gain')"
+          :max="500" 
+          @update:model-value="saveHardware"
+        />
+      </BaseCard>
+
+      <!-- Mechanical Config -->
+      <BaseCard title="Mechanical Config">
+        <BaseSlider 
+          v-model="hardware.pole_pairs" 
+          :label="$t('setting_pole_pairs')" 
+          :help="$t('help_pole_pairs')"
+          :min="1" 
+          :max="50" 
+          @update:model-value="saveHardware"
+        />
+        <div class="switch-group">
+          <BaseSwitch 
+            v-model="encoderDir" 
+            :label="$t('setting_encoder_dir')" 
+            :help="$t('help_encoder_direction')"
+            @update:model-value="handleSwitches"
+          />
+          <BaseSwitch 
+            v-model="forceDir" 
+            :label="$t('setting_force_dir')" 
+            :help="$t('help_force_direction')"
+            @update:model-value="handleSwitches"
+          />
+          <BaseSwitch 
+            v-model="debugTorque" 
+            :label="$t('setting_debug_torque')" 
+            :help="$t('help_debug_torque')"
+            @update:model-value="handleSwitches"
+          />
+        </div>
+      </BaseCard>
+
+      <!-- Calibration -->
+      <BaseCard title="Calibration">
+        <BaseSlider 
+          v-model="hardware.calibration_speed" 
+          :label="$t('setting_calibration_speed')" 
+          :help="$t('help_calibration_speed')"
+          @update:model-value="saveHardware"
+        />
+        <BaseSlider 
+          v-model="hardware.calibration_magnitude" 
+          :label="$t('setting_calibration_magnitude')" 
+          :help="$t('help_calibration_magnitude')"
+          @update:model-value="saveHardware"
+        />
+      </BaseCard>
+
+      <!-- PID Controller -->
+      <BaseCard :title="$t('group_pid')">
+        <p class="description">{{ $t('group_pid_desc') }}</p>
+        <BaseSlider 
+          v-model="hardware.proportional_gain" 
+          :label="$t('setting_p_gain')" 
+          :help="$t('help_proportional_gain')"
+          :max="2000" 
+          @update:model-value="saveHardware"
+        />
+        <BaseSlider 
+          v-model="hardware.integral_gain" 
+          :label="$t('setting_i_gain')" 
+          :help="$t('help_integral_gain')"
+          :max="1000" 
+          @update:model-value="saveHardware"
+        />
+      </BaseCard>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, watch, onMounted } from 'vue';
+import { useHardwareStore } from '../../stores/hardware';
+import BaseCard from '../common/BaseCard.vue';
+import BaseSlider from '../common/BaseSlider.vue';
+import BaseSwitch from '../common/BaseSwitch.vue';
+
+const store = useHardwareStore();
+
+const hardware = reactive({
+  power_limit: store.hardware?.power_limit ?? 100,
+  braking_limit: store.hardware?.braking_limit ?? 100,
+  amplifier_gain: store.hardware?.amplifier_gain ?? 100,
+  pole_pairs: store.hardware?.pole_pairs ?? 7,
+  calibration_speed: store.hardware?.calibration_speed ?? 10,
+  calibration_magnitude: store.hardware?.calibration_magnitude ?? 50,
+  proportional_gain: store.hardware?.proportional_gain ?? 100,
+  integral_gain: store.hardware?.integral_gain ?? 0,
+});
+
+const encoderDir = ref(false);
+const forceDir = ref(false);
+const debugTorque = ref(false);
+
+const syncFromStore = () => {
+  if (store.hardware) {
+    Object.assign(hardware, store.hardware);
+    encoderDir.value = store.hardware.encoder_direction === 1;
+    forceDir.value = store.hardware.force_direction === 1;
+    debugTorque.value = store.hardware.debug_torque === 1;
+  }
+};
+
+onMounted(syncFromStore);
+watch(() => store.hardware, syncFromStore, { deep: true });
+
+const saveHardware = () => {
+  store.updateHW({
+    ...hardware,
+    encoder_direction: encoderDir.value ? 1 : 0,
+    force_direction: forceDir.value ? 1 : 0,
+    debug_torque: debugTorque.value ? 1 : 0,
+  });
+};
+
+const handleSwitches = () => {
+  saveHardware();
+};
+</script>
+
+<style scoped>
+.hardware-tab {
+  padding: var(--content-padding);
+}
+
+.grid-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.switch-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+</style>

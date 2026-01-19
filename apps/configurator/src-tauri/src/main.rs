@@ -1,5 +1,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    sodevs_configurator_lib::run()
+    ffbeast_ui_lib::run()
 }
