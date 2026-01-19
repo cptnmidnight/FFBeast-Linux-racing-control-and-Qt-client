@@ -71,12 +71,12 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: launcher/src-tauri
+          workspaces: apps/launcher/src-tauri
 
       - name: Install dependencies
-        working-directory: launcher
+        working-directory: apps/launcher
         run: npm install
 
       - name: Build launcher
-        working-directory: launcher
+        working-directory: apps/launcher
         run: npm run tauri build -- --bundles deb

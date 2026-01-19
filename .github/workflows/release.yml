@@ -93,11 +93,11 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
-        working-directory: launcher
+        working-directory: apps/launcher
         run: npm install
 
       - name: Build Launcher (Linux)
-        working-directory: launcher
+        working-directory: apps/launcher
         run: npm run tauri build -- --bundles appimage,deb,rpm
 
       - name: Upload Launcher Linux Artifacts
@@ -105,9 +105,9 @@ jobs:
         with:
           name: launcher-linux
           path: |
-            launcher/src-tauri/target/release/bundle/appimage/*.AppImage
-            launcher/src-tauri/target/release/bundle/deb/*.deb
-            launcher/src-tauri/target/release/bundle/rpm/*.rpm
+            apps/launcher/src-tauri/target/release/bundle/appimage/*.AppImage
+            apps/launcher/src-tauri/target/release/bundle/deb/*.deb
+            apps/launcher/src-tauri/target/release/bundle/rpm/*.rpm
 
   release:
     needs: [build-configurator-windows, build-configurator-linux, build-launcher-linux]
