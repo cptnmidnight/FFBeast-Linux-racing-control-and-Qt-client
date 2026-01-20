@@ -5,6 +5,10 @@
         <div class="header-content">
           <h3>{{ $t('tab_logs') }} (Live)</h3>
           <div class="actions">
+            <label class="auto-scroll-toggle">
+              <input type="checkbox" v-model="autoScroll">
+              <span>Auto-scroll</span>
+            </label>
             <button class="btn-small" @click="clearLogs">Clear</button>
             <button class="btn-small" @click="exportLogs">Export</button>
           </div>
@@ -31,8 +35,10 @@ import { storeToRefs } from 'pinia';
 const logStore = useLogStore();
 const { logs } = storeToRefs(logStore);
 const scrollContainer = ref<HTMLElement | null>(null);
+const autoScroll = ref(true);
 
 const scrollToBottom = async () => {
+  if (!autoScroll.value) return;
   await nextTick();
   if (scrollContainer.value) {
     scrollContainer.value.scrollTop = scrollContainer.value.scrollHeight;
@@ -40,7 +46,11 @@ const scrollToBottom = async () => {
 };
 
 // Watch for new logs to auto-scroll
-watch(() => logs.value.length, scrollToBottom);
+watch(() => logs.value.length, () => {
+  if (autoScroll.value) {
+    scrollToBottom();
+  }
+});
 
 const clearLogs = () => {
   logStore.clearLogs();
@@ -70,12 +80,24 @@ onMounted(() => {
 .logs-tab {
   padding: var(--content-padding);
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 
 .full-height {
   height: 100%;
+  display: flex !important;
+  flex-direction: column;
+  overflow: hidden; /* Prevent card itself from growing */
+}
+
+/* Force the internal content area of BaseCard to be a flex child that doesn't overflow */
+:deep(.card-content) {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  flex: 1;
 }
 
 .header-content {
@@ -103,6 +125,22 @@ onMounted(() => {
   color: var(--text-main);
 }
 
+.auto-scroll-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  cursor: pointer;
+  margin-right: 8px;
+  user-select: none;
+}
+
+.auto-scroll-toggle input {
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
 .logs-wrapper {
   flex: 1;
   background: rgba(0, 0, 0, 0.4);
@@ -111,11 +149,14 @@ onMounted(() => {
   font-family: var(--font-mono);
   font-size: 0.85rem;
   overflow-y: auto;
+  min-height: 0; /* Important for flex child overflow */
 }
 
 .log-line {
   margin-bottom: 4px;
   white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: anywhere;
   line-height: 1.4;
 }
 
