@@ -20,7 +20,8 @@ export const useUIStore = defineStore('ui', {
             toastPosition: 'bottom-right' as 'top-right' | 'bottom-right' | 'top-left' | 'bottom-left',
             toastMargin: 20,
             fontFamily: 'Outfit',
-            fontSize: 16
+            fontSize: 16,
+            debugMode: false
         }
     }),
 

@@ -19,20 +19,46 @@
       </div>
     </div>
 
+    <div v-if="uiStore.settings.debugMode" class="debug-panel">
+      <!-- ... same content ... -->
+      <h4>Raw Hardware Data</h4>
+      <div class="debug-grid">
+        <div class="debug-item">
+          <span class="d-label">Position:</span>
+          <span class="d-value">{{ currentPosition }}</span>
+        </div>
+        <div class="debug-item">
+          <span class="d-label">Torque:</span>
+          <span class="d-value">{{ currentTorque }}</span>
+        </div>
+        <div class="debug-item">
+          <span class="d-label">Buttons (HEX):</span>
+          <span class="d-value">0x{{ currentButtons.toString(16).toUpperCase().padStart(8, '0') }}</span>
+        </div>
+        <div class="debug-item wide">
+          <span class="d-label">ADC Values:</span>
+          <span class="d-value font-mono">[{{ analogValues.join(', ') }}]</span>
+        </div>
+      </div>
+    </div>
+
     <div class="middle-row">
       <AnalogMonitor :values="analogValues" />
       <ButtonsGrid :buttons="currentButtons" />
     </div>
 
-    <div class="bottom-row">
-      <LogsWidget :logs="mockLogs" />
+    <div class="bottom-row" v-if="uiStore.settings.debugMode">
+      <LogsWidget :logs="logs" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useHardwareStore } from '../../stores/hardware';
+import { useLogStore } from '../../stores/logs';
+import { useUIStore } from '../../stores/ui';
+import { storeToRefs } from 'pinia';
 import WheelVisual from '../monitor/WheelVisual.vue';
 import TorqueIndicator from '../monitor/TorqueIndicator.vue';
 import AnalogMonitor from '../monitor/AnalogMonitor.vue';
@@ -41,6 +67,11 @@ import LogsWidget from '../monitor/LogsWidget.vue';
 import BaseSwitch from '../common/BaseSwitch.vue';
 
 const store = useHardwareStore();
+const logStore = useLogStore();
+const uiStore = useUIStore();
+const { logs } = storeToRefs(logStore);
+
+console.log('[MonitorTab] Initializing...');
 
 const currentPosition = computed(() => store.status?.position ?? 0);
 const currentTorque = computed(() => store.status?.torque ?? 0);
@@ -55,12 +86,6 @@ const ffbEnabled = computed({
 const toggleFFB = async (val: boolean) => {
   await store.updateHW({ force_enabled: val ? 1 : 0 });
 };
-
-const mockLogs = ref([
-  { time: '21:45:01', level: 'info' as const, message: 'System initialized' },
-  { time: '21:45:02', level: 'info' as const, message: 'Connected to FFBeast Controller' },
-  { time: '21:45:03', level: 'warn' as const, message: 'Late handshake detected' },
-]);
 </script>
 
 <style scoped>
@@ -130,5 +155,52 @@ const mockLogs = ref([
 .bottom-row {
   display: grid;
   grid-template-columns: 1fr;
+}
+
+.debug-panel {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.debug-panel h4 {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 0.8rem;
+  letter-spacing: 1px;
+}
+
+.debug-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.debug-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.debug-item.wide {
+  grid-column: span 2;
+}
+
+.d-label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.d-value {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--accent);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
 }
 </style>

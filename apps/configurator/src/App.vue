@@ -40,7 +40,14 @@
         <div class="header-actions">
           <button class="btn-outline reboot" @click="handleReboot">{{ $t('btn_reboot') }}</button>
           <button class="btn-outline" @click="handleResetCenter">{{ $t('btn_reset_center') }}</button>
-          <button class="btn-primary" @click="handleSave">{{ $t('btn_save') }}</button>
+          <button 
+            :class="['btn-primary', { 'has-changes': store.hasUnsavedChanges, 'reboot-required': store.rebootRequired }]" 
+            @click="handleSave"
+            :title="store.rebootRequired ? $t('warning_reboot_required') : ''"
+          >
+            <span v-if="store.hasUnsavedChanges" class="unsaved-dot"></span>
+            {{ store.rebootRequired ? $t('btn_save_reboot') : $t('btn_save') }}
+          </button>
         </div>
       </header>
 
@@ -116,9 +123,42 @@ const statusTextKey = computed(() => {
   return store.isConnected ? 'status_connected' : 'status_disconnected';
 });
 
-const handleReboot = () => store.reboot();
-const handleResetCenter = () => store.resetCenter();
-const handleSave = () => store.saveToEeprom();
+const handleReboot = async () => {
+    console.log('[App] Reboot button clicked');
+    try {
+        await store.reboot();
+        console.log('[App] Reboot completed');
+    } catch (err) {
+        console.error('[App] Reboot error:', err);
+    }
+};
+
+const handleResetCenter = async () => {
+    console.log('[App] Reset center button clicked');
+    try {
+        await store.resetCenter();
+        console.log('[App] Reset center completed');
+    } catch (err) {
+        console.error('[App] Reset center error:', err);
+    }
+};
+
+const handleSave = async () => {
+    console.log('[App] Save button clicked');
+    try {
+        const needsReboot = store.rebootRequired;
+        await store.saveToEeprom();
+        
+        if (needsReboot) {
+             console.log('[App] Reboot required, rebooting...');
+             await store.reboot();
+        }
+        
+        console.log('[App] Save completed');
+    } catch (err) {
+        console.error('[App] Save error:', err);
+    }
+};
 
 onMounted(() => {
   store.init();
@@ -402,5 +442,61 @@ const setupGlobalTooltips = () => {
 .fade-leave-to {
   opacity: 0;
   transform: translateY(10px);
+}
+
+.btn-primary.has-changes {
+  animation: pulse-glow 2s infinite;
+  position: relative;
+}
+
+.unsaved-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--warning);
+  border-radius: 50%;
+  margin-right: 8px;
+  animation: pulse-dot 1.5s infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 15px var(--accent-glow);
+  }
+  50% {
+    box-shadow: 0 0 25px var(--accent-glow), 0 0 10px var(--warning);
+  }
+}
+
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
+}
+
+.btn-primary.reboot-required {
+  background: var(--warning);
+  color: #121216;
+  border-color: var(--warning);
+  animation: pulse-reboot 2s infinite;
+}
+
+.btn-primary.reboot-required:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 0 15px rgba(255, 165, 2, 0.6);
+}
+
+@keyframes pulse-reboot {
+  0%, 100% {
+    box-shadow: 0 0 10px rgba(255, 165, 2, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(255, 165, 2, 0.7);
+  }
 }
 </style>

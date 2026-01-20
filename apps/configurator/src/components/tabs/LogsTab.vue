@@ -1,9 +1,9 @@
 <template>
   <div class="logs-tab">
-    <BaseCard :title="$t('tab_logs')" class="full-height">
+    <BaseCard :title="$t('tab_logs') + ' (Live)'" class="full-height">
       <template #header>
         <div class="header-content">
-          <h3>{{ $t('tab_logs') }}</h3>
+          <h3>{{ $t('tab_logs') }} (Live)</h3>
           <div class="actions">
             <button class="btn-small" @click="clearLogs">Clear</button>
             <button class="btn-small" @click="exportLogs">Export</button>
@@ -13,6 +13,7 @@
       <div class="logs-wrapper" ref="scrollContainer">
         <div v-for="(log, index) in logs" :key="index" :class="['log-line', log.level]">
           <span class="time">[{{ log.time }}]</span>
+          <span class="source" v-if="log.source">[{{ log.source.toUpperCase().slice(0,2) }}]</span>
           <span class="level">[{{ log.level.toUpperCase() }}]</span>
           <span class="message">{{ log.message }}</span>
         </div>
@@ -22,37 +23,46 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUpdated } from 'vue';
+import { ref, watch, nextTick, onMounted } from 'vue';
 import BaseCard from '../common/BaseCard.vue';
+import { useLogStore } from '../../stores/logs';
+import { storeToRefs } from 'pinia';
 
-interface LogEntry {
-  time: string;
-  level: 'info' | 'warn' | 'error' | 'debug';
-  message: string;
-}
-
-const logs = ref<LogEntry[]>([
-  { time: '21:55:01', level: 'info', message: 'Application started' },
-  { time: '21:55:02', level: 'debug', message: 'HID Device discovery started' },
-  { time: '21:55:05', level: 'info', message: 'Found FFBeast device on COM3' },
-  { time: '21:55:10', level: 'warn', message: 'HANDSHAKE: Retrying (attempt 1)' },
-]);
-
+const logStore = useLogStore();
+const { logs } = storeToRefs(logStore);
 const scrollContainer = ref<HTMLElement | null>(null);
 
+const scrollToBottom = async () => {
+  await nextTick();
+  if (scrollContainer.value) {
+    scrollContainer.value.scrollTop = scrollContainer.value.scrollHeight;
+  }
+};
+
+// Watch for new logs to auto-scroll
+watch(() => logs.value.length, scrollToBottom);
+
 const clearLogs = () => {
-  logs.value = [];
+  logStore.clearLogs();
 };
 
 const exportLogs = () => {
   const content = logs.value.map(l => `[${l.time}] [${l.level.toUpperCase()}] ${l.message}`).join('\n');
-  console.log('Exporting logs:', content);
+  
+  // Create a blob and download it
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ffbeast-logs-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 };
 
-onUpdated(() => {
-  if (scrollContainer.value) {
-    scrollContainer.value.scrollTop = scrollContainer.value.scrollHeight;
-  }
+onMounted(() => {
+    scrollToBottom();
 });
 </script>
 
@@ -110,6 +120,7 @@ onUpdated(() => {
 }
 
 .time { color: var(--text-dim); margin-right: 8px; }
+.source { color: var(--primary); margin-right: 8px; font-weight: bold; }
 .level { font-weight: bold; margin-right: 8px; width: 60px; display: inline-block; }
 .info .level { color: var(--info); }
 .warn .level { color: var(--warning); }

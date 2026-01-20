@@ -317,32 +317,14 @@ impl WheelInterface for HardwareService {
                 }
 
                 // ALWAYS log first 10 packets AND whenever buttons/ADC are non-zero
-                static mut DETAIL_LOG_COUNT: usize = 0;
-                unsafe {
-                    let should_log =
-                        DETAIL_LOG_COUNT < 10 || buttons != 0 || adc.iter().any(|&v| v > 0);
-                    if should_log {
-                        tracing::info!(
-                            "HID Status [{}bytes]: pos={} torque={} buttons=0x{:08X} adc={:?}",
-                            res,
-                            pos,
-                            torque,
-                            buttons,
-                            adc
-                        );
-                        tracing::info!(
-                            "Raw button bytes [10-13]: {:02X} {:02X} {:02X} {:02X}",
-                            buf[10],
-                            buf[11],
-                            buf[12],
-                            buf[13]
-                        );
-                        if res >= 26 {
-                            tracing::info!("Raw ADC bytes [14-25]: {:02X?}", &buf[14..26]);
-                        }
-                        DETAIL_LOG_COUNT += 1;
-                    }
-                }
+                tracing::trace!(
+                    "HID Status [{}bytes]: pos={} torque={} buttons=0x{:08X} adc={:?}",
+                    res,
+                    pos,
+                    torque,
+                    buttons,
+                    adc
+                );
 
                 // Merge gamepad data (cross-platform button/axis reading)
                 // Use gamepad as fallback when HID Report has no data
@@ -533,9 +515,24 @@ impl WheelInterface for HardwareService {
 
     #[instrument(skip(self), err)]
     fn send_hardware_settings(&self, settings: HardwareSettings) -> Result<()> {
+        // Send fields individually as per protocol reference (wheel_api_lib.js)
         self.send_field(24, 0, (settings.encoder_cpr as u16).to_le_bytes().to_vec())?;
+        self.send_field(26, 0, (settings.integral_gain as u16).to_le_bytes().to_vec())?;
+        self.send_field(25, 0, vec![settings.proportional_gain])?;
+        self.send_field(11, 0, vec![settings.force_enabled])?;
+        self.send_field(12, 0, vec![settings.debug_torque])?;
+        self.send_field(13, 0, vec![settings.amplifier_gain])?;
+        self.send_field(15, 0, vec![settings.calibration_magnitude])?;
+        self.send_field(16, 0, vec![settings.calibration_speed])?;
         self.send_field(17, 0, vec![settings.power_limit])?;
+        self.send_field(18, 0, vec![settings.braking_limit])?;
+        self.send_field(19, 0, vec![settings.position_smoothing])?;
+        self.send_field(20, 0, vec![settings.speed_buffer_size])?;
+        // Cast i8 to u8 via bitcast (to_le_bytes handles it for u8/i8 implicitly or just cast)
+        self.send_field(21, 0, vec![settings.encoder_direction as u8])?;
+        self.send_field(22, 0, vec![settings.force_direction as u8])?;
         self.send_field(23, 0, vec![settings.pole_pairs])?;
+        
         Ok(())
     }
 

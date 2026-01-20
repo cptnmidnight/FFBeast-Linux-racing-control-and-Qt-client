@@ -213,6 +213,20 @@ fn set_keyboard_mapping(
     Ok(())
 }
 
+#[derive(serde::Serialize)]
+struct AppVersions {
+    app: String,
+    controller: String,
+}
+
+#[tauri::command]
+fn get_versions() -> AppVersions {
+    AppVersions {
+        app: env!("CARGO_PKG_VERSION").to_string(),
+        controller: ffbeast_controller::VERSION.to_string(),
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tracing_subscriber::fmt()
@@ -296,7 +310,8 @@ pub fn run() {
             toggle_keyboard_service,
             set_keyboard_mapping,
             switch_to_dfu,
-            send_direct_control
+            send_direct_control,
+            get_versions
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

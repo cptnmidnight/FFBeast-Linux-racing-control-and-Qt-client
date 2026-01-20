@@ -195,7 +195,133 @@ impl GamepadReader for GilrsGamepadReader {
     }
 }
 
+/// Linux-specific Evdev reader (Direct /dev/input/event* access)
+#[cfg(target_os = "linux")]
+pub struct EvdevGamepadReader {
+    device: evdev::Device,
+    state: GamepadState,
+    name: String,
+}
+
+#[cfg(target_os = "linux")]
+use std::os::unix::io::AsRawFd;
+
+#[cfg(target_os = "linux")]
+impl EvdevGamepadReader {
+    pub fn new() -> Result<Self> {
+        tracing::info!("[EvdevReader] Enumerating devices...");
+        
+        // Find device containing "ffbeast" or related keywords
+        let (_, device) = evdev::enumerate()
+            .find(|(_, dev)| {
+                let name = dev.name().unwrap_or("").to_lowercase();
+                // tracing::debug!("Checking device: {}", name);
+                name.contains("ffbeast") || name.contains("wheel") 
+            })
+            .ok_or_else(|| anyhow!("FFBeast device not found via evdev"))?;
+            
+        let name = device.name().unwrap_or("Unknown").to_string();
+        tracing::info!("[EvdevReader] Selected device: {}", name);
+        
+        // Log supported keys for debugging mapping
+        if let Some(keys) = device.supported_keys() {
+            tracing::info!("[EvdevReader] Supported Keys: {:?}", keys);
+        }
+
+        // IMPORTANT: Set non-blocking mode to avoid freezing the polling thread
+        // which holds the HardwareService lock, causing UI freeze (deadlock on RPC)
+        let fd = device.as_raw_fd();
+        unsafe {
+            let flags = libc::fcntl(fd, libc::F_GETFL);
+            if flags < 0 {
+                tracing::warn!("[EvdevReader] Failed to get device flags");
+            } else {
+                let res = libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK);
+                if res < 0 {
+                    tracing::warn!("[EvdevReader] Failed to set non-blocking mode");
+                } else {
+                    tracing::info!("[EvdevReader] Non-blocking mode enabled");
+                }
+            }
+        }
+        
+        Ok(Self {
+            device,
+            state: GamepadState::default(),
+            name,
+        })
+    }
+}
+
+#[cfg(target_os = "linux")]
+impl GamepadReader for EvdevGamepadReader {
+    fn read_state(&mut self) -> Result<GamepadState> {
+        // Process pending events
+        match self.device.fetch_events() {
+            Ok(events) => {
+                for event in events {
+                     if let evdev::InputEventKind::Key(key) = event.kind() {
+                         let code = key.code();
+                         let val = event.value(); // 0=release, 1=press, 2=repeat
+                         
+                         if val == 2 { continue; } // Ignore repeats
+                         
+                         if val == 2 { continue; } // Ignore repeats
+                         
+                         // Force mapping based on observation (FFBeast usages)
+                         // Range 1: BTN_0 (0x100 / 256) -> Buttons 0..31
+                         // Range 2: BTN_JOYSTICK/TRIGGER (0x120 / 288) -> Buttons 0..31
+                         
+                         let final_bit = if code >= 256 && code < 256+32 {
+                             Some((code - 256) as u32)
+                         } else if code >= 288 && code < 288+32 {
+                             Some((code - 288) as u32)
+                         } else {
+                             None
+                         };
+                         
+                         if let Some(b) = final_bit {
+                             if val > 0 {
+                                 self.state.buttons |= 1 << b;
+                             } else {
+                                 self.state.buttons &= !(1 << b);
+                             }
+                         }
+                     }
+                     // TODO: Add Absolute Axis implementation if needed
+                }
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
+                // No events, OK
+            }
+            Err(e) => {
+                tracing::warn!("[EvdevReader] Error reading events: {}", e);
+                // Don't return error to keep polling alive, but maybe should reconnect?
+            }
+        }
+        
+        Ok(self.state.clone())
+    }
+    
+    fn is_connected(&self) -> bool { true }
+    fn name(&self) -> &str { &self.name }
+}
+
 /// Factory function to create platform-specific gamepad reader
 pub fn create_gamepad_reader() -> Result<Box<dyn GamepadReader>> {
+    #[cfg(target_os = "linux")]
+    {
+        // Try direct Evdev first
+        match EvdevGamepadReader::new() {
+            Ok(reader) => {
+                tracing::info!("[create_gamepad_reader] Successfully initialized EvdevReader");
+                return Ok(Box::new(reader));
+            },
+            Err(e) => {
+                tracing::warn!("[create_gamepad_reader] EvdevReader failed: {}. Falling back to Gilrs.", e);
+            }
+        }
+    }
+
     GilrsGamepadReader::new().map(|r| Box::new(r) as Box<dyn GamepadReader>)
 }

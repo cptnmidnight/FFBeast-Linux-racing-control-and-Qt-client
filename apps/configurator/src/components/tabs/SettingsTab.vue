@@ -45,6 +45,7 @@
           v-model="uiStore.settings.toastPosition" 
           :options="toastPositionOptions" 
           :label="$t('setting_toast_position')"
+          :use-i18n="true"
         />
         
         <BaseSlider 
@@ -53,6 +54,19 @@
           :min="10" 
           :max="100" 
         />
+        
+        <button class="btn-test" @click="testToast">{{ $t('btn_test_toast') }}</button>
+      </BaseCard>
+
+      <!-- Advanced Settings -->
+      <BaseCard :title="$t('settings_advanced') || 'Advanced Settings'">
+        <div class="control-group">
+          <div class="label-col">
+            <span class="label">{{ $t('setting_debug_mode') }}</span>
+            <span class="desc">{{ $t('setting_debug_desc') }}</span>
+          </div>
+          <BaseSwitch v-model="uiStore.settings.debugMode" />
+        </div>
       </BaseCard>
 
       <!-- App Info -->
@@ -60,11 +74,15 @@
         <div class="info-grid">
           <div class="info-row">
             <span class="info-label">{{ $t('settings_version') }}</span>
-            <span class="info-value">v2.0.0-beta</span>
+            <span class="info-value">v{{ versions.app }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Controller SDK</span>
+            <span class="info-value">v{{ versions.controller }}</span>
           </div>
           <div class="info-row">
             <span class="info-label">{{ $t('setting_build_date') }}</span>
-            <span class="info-value">2026-01-18</span>
+            <span class="info-value">2026-01-20</span>
           </div>
           <div class="info-row">
             <span class="info-label">{{ $t('setting_platform') }}</span>
@@ -83,17 +101,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useUIStore } from '../../stores/ui';
+import { HardwareService } from '../../services/hardware_service';
 import BaseCard from '../common/BaseCard.vue';
 import BaseSelect from '../common/BaseSelect.vue';
 import BaseSlider from '../common/BaseSlider.vue';
+import BaseSwitch from '../common/BaseSwitch.vue';
 
 const { locale } = useI18n();
 const uiStore = useUIStore();
 
 const language = ref(locale.value);
+const versions = ref({ app: 'Loading...', controller: 'Loading...' });
+
+onMounted(async () => {
+  try {
+    const v = await HardwareService.getVersions();
+    versions.value = v;
+  } catch (e) {
+    console.error('Failed to get versions:', e);
+    versions.value = { app: 'Unknown', controller: 'Unknown' };
+  }
+});
 
 const langOptions = [
   { label: 'English', value: 'en' },
@@ -107,10 +138,10 @@ const fontOptions = [
 ];
 
 const toastPositionOptions = [
-  { label: 'Top Right', value: 'top-right' },
-  { label: 'Bottom Right', value: 'bottom-right' },
-  { label: 'Top Left', value: 'top-left' },
-  { label: 'Bottom Left', value: 'bottom-left' },
+  { label: 'toast_pos_top_right', value: 'top-right' },
+  { label: 'toast_pos_bottom_right', value: 'bottom-right' },
+  { label: 'toast_pos_top_left', value: 'top-left' },
+  { label: 'toast_pos_bottom_left', value: 'bottom-left' },
 ];
 
 // Avoid semantic colors (success, error, warning)
@@ -142,6 +173,11 @@ const setAccent = (color: string) => {
   document.documentElement.style.setProperty('--accent-glow', color + '66');
   localStorage.setItem('ffbeast_accent', color);
 };
+
+const testToast = () => {
+  console.log('[SettingsTab] Test toast button clicked');
+  uiStore.showToast('This is a test toast notification! 🎉', 'success');
+};
 </script>
 
 <style scoped>
@@ -153,6 +189,29 @@ const setAccent = (color: string) => {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 1.5rem;
+}
+
+.control-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.label-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.label-col .label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-main);
+}
+
+.label-col .desc {
+  font-size: 0.75rem;
+  color: var(--text-dim);
 }
 
 .theme-selector {
@@ -218,5 +277,22 @@ const setAccent = (color: string) => {
 
 .footer-links a:hover {
   text-decoration: underline;
+}
+
+.btn-test {
+  margin-top: 1rem;
+  padding: 10px 20px;
+  background: var(--accent);
+  color: #000;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-test:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 0 15px var(--accent-glow);
 }
 </style>

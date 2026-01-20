@@ -2,6 +2,7 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import App from './App.vue';
 import { createI18n } from 'vue-i18n';
+import { setI18nInstance } from './i18n';
 
 // Styles
 import './styles/global.css';
@@ -26,6 +27,9 @@ const i18n = createI18n({
         'pt': br
     }
 });
+
+// Make i18n available to stores
+setI18nInstance(i18n);
 
 const app = createApp(App);
 app.use(createPinia());

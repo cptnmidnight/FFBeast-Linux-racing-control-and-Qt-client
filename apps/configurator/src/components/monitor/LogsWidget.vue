@@ -20,8 +20,9 @@ import { ref, onUpdated } from 'vue';
 
 interface LogEntry {
   time: string;
-  level: 'info' | 'warn' | 'error';
+  level: 'info' | 'warn' | 'error' | 'debug';
   message: string;
+  source?: string;
 }
 
 defineProps<{
@@ -38,6 +39,7 @@ onUpdated(() => {
 </script>
 
 <style scoped>
+/* ... existing styles ... */
 section {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -81,6 +83,7 @@ section {
 .info { color: var(--info); }
 .warn { color: var(--warning); }
 .error { color: var(--danger); }
+.debug { color: #888; }
 
 .no-logs {
   color: var(--text-dim);

@@ -6,6 +6,9 @@ import type { HardwareSettings } from '../models/HardwareSettings';
 import type { GpioSettings } from '../models/GpioSettings';
 
 import type { AdcSettings } from '../models/AdcSettings';
+import { useUIStore } from './ui';
+import { t } from '../i18n';
+import { useLogStore } from './logs';
 
 export const useHardwareStore = defineStore('hardware', {
     state: () => ({
@@ -18,28 +21,33 @@ export const useHardwareStore = defineStore('hardware', {
         adc: null as AdcSettings | null,
         lastError: null as string | null,
         reconnectTimer: null as ReturnType<typeof setInterval> | null,
+        hasUnsavedChanges: false,
+        rebootRequired: false,
     }),
 
     actions: {
+        log(level: 'info' | 'warn' | 'error' | 'debug', msg: string) {
+            useLogStore().addLog(level, msg, 'backend'); // Marking as backend related logic
+        },
+
         async init() {
-            console.log('[HardwareStore] Initializing...');
+            this.log('info', 'HardwareStore initializing...');
             await this.connect();
             this.startAutoReconnect();
         },
 
         async connect() {
             if (this.isConnecting || this.isConnected) {
-                console.log('[HardwareStore] Already connecting or connected, skipping');
                 return;
             }
 
-            console.log('[HardwareStore] Attempting to connect to hardware...');
+            this.log('debug', 'Attempting to connect to hardware...');
             this.isConnecting = true;
 
             try {
-                console.log('[HardwareStore] Calling getHandshake...');
+                this.log('debug', 'Calling getHandshake...');
                 const data = await HardwareService.getHandshake();
-                console.log('[HardwareStore] Handshake successful:', data);
+                this.log('info', 'Handshake successful');
 
                 this.status = data.status;
                 this.effects = data.fx;
@@ -49,12 +57,15 @@ export const useHardwareStore = defineStore('hardware', {
                 this.isConnected = true;
                 this.lastError = null;
 
-                console.log('[HardwareStore] Connection established, starting polling');
+                this.log('info', 'Connection established, starting polling');
                 this.startPolling();
             } catch (err) {
-                console.error('[HardwareStore] Handshake failed:', err);
+                const msg = String(err);
+                if (msg !== this.lastError) { // Avoid spamming same error
+                    this.log('error', `Handshake failed: ${msg}`);
+                }
                 this.isConnected = false;
-                this.lastError = String(err);
+                this.lastError = msg;
             } finally {
                 this.isConnecting = false;
             }
@@ -92,24 +103,85 @@ export const useHardwareStore = defineStore('hardware', {
             if (!this.effects) return;
             this.effects = { ...this.effects, ...newFx };
             await HardwareService.updateEffectSettings(this.effects);
+            this.hasUnsavedChanges = true;
         },
 
         async updateHW(newHw: Partial<HardwareSettings>) {
             if (!this.hardware) return;
+
+            // Check for reboot required fields
+            if (newHw.force_enabled !== undefined && newHw.force_enabled !== this.hardware.force_enabled) {
+                this.rebootRequired = true;
+            }
+
             this.hardware = { ...this.hardware, ...newHw };
             await HardwareService.updateHardwareSettings(this.hardware);
+            this.hasUnsavedChanges = true;
         },
 
         async reboot() {
-            await HardwareService.reboot();
+            this.log('info', 'Reboot command called');
+            const ui = useUIStore();
+
+            if (!this.isConnected) {
+                ui.showToast(t('toast_device_not_connected'), 'error');
+                this.log('warn', 'Cannot reboot: device not connected');
+                return;
+            }
+            try {
+                this.log('debug', 'Calling HardwareService.reboot()...');
+                await HardwareService.reboot();
+                this.log('info', 'Reboot command sent successfully');
+                this.rebootRequired = false;
+                ui.showToast(t('toast_device_rebooting'), 'success');
+            } catch (err) {
+                this.log('error', `reboot() error: ${err}`);
+                ui.showToast(`${t('toast_reboot_failed')}: ${err}`, 'error');
+                throw err;
+            }
         },
 
         async resetCenter() {
-            await HardwareService.resetCenter();
+            this.log('info', 'Reset Center command called');
+            const ui = useUIStore();
+
+            if (!this.isConnected) {
+                ui.showToast(t('toast_device_not_connected'), 'error');
+                this.log('warn', 'Cannot reset center: device not connected');
+                return;
+            }
+            try {
+                this.log('debug', 'Calling HardwareService.resetCenter()...');
+                await HardwareService.resetCenter();
+                this.log('info', 'Center reset successfully');
+                ui.showToast(t('toast_center_reset'), 'success');
+            } catch (err) {
+                this.log('error', `resetCenter() error: ${err}`);
+                ui.showToast(`${t('toast_reset_failed')}: ${err}`, 'error');
+                throw err;
+            }
         },
 
         async saveToEeprom() {
-            await HardwareService.saveToEeprom();
+            this.log('info', 'Save Settings command called');
+            const ui = useUIStore();
+
+            if (!this.isConnected) {
+                ui.showToast(t('toast_device_not_connected'), 'error');
+                this.log('warn', 'Cannot save: device not connected');
+                return;
+            }
+            try {
+                this.log('debug', 'Calling HardwareService.saveToEeprom()...');
+                await HardwareService.saveToEeprom();
+                this.log('info', 'Settings saved to EEPROM successfully');
+                this.hasUnsavedChanges = false;
+                ui.showToast(t('toast_settings_saved'), 'success');
+            } catch (err) {
+                this.log('error', `saveToEeprom() error: ${err}`);
+                ui.showToast(`${t('toast_save_failed')}: ${err}`, 'error');
+                throw err;
+            }
         },
 
         async sendFFBTest(type: number, value: number) {
@@ -128,12 +200,15 @@ export const useHardwareStore = defineStore('hardware', {
             if (!this.gpio) return;
             this.gpio = { ...this.gpio, ...newGpio };
             await HardwareService.updateGpioSettings(this.gpio);
+            this.hasUnsavedChanges = true;
+            this.rebootRequired = true;
         },
 
         async updateADC(newAdc: Partial<AdcSettings>) {
             if (!this.adc) return;
             this.adc = { ...this.adc, ...newAdc };
             await HardwareService.updateAdcSettings(this.adc);
+            this.hasUnsavedChanges = true;
         },
 
         async updateKeyboardMapping(mappings: any[]) {

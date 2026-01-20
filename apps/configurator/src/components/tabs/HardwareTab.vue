@@ -6,6 +6,7 @@
         <BaseSwitch 
           v-model="ffbEnabled" 
           :label="$t('ffb_active_label')" 
+          :help="$t('help_force_enabled')"
           @update:model-value="toggleFFB"
         />
         <BaseSlider 

@@ -45,7 +45,7 @@ export const HardwareService = {
     },
 
     async saveToEeprom(): Promise<void> {
-        await invoke('save_all_to_eeprom');
+        await invoke('save_settings');
     },
 
     async sendDirectControl(forceType: number, value: number): Promise<void> {
@@ -66,5 +66,9 @@ export const HardwareService = {
 
     async setKeyboardMapping(mappings: any[]): Promise<void> {
         await invoke('set_keyboard_mapping', { mappings });
+    },
+
+    async getVersions(): Promise<{ app: string, controller: string }> {
+        return await invoke('get_versions');
     }
 };
