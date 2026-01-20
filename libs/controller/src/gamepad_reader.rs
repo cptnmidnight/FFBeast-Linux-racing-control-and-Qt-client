@@ -110,32 +110,19 @@ impl GamepadReader for GilrsGamepadReader {
         let gamepad = self.gilrs.gamepad(gamepad_id);
         let mut state = GamepadState::default();
 
-        // Read buttons using is_pressed() directly
-        use gilrs::Button;
-        let button_map = [
-            (Button::South, 0),
-            (Button::East, 1),
-            (Button::North, 2),
-            (Button::West, 3),
-            (Button::LeftTrigger, 4),
-            (Button::RightTrigger, 5),
-            (Button::LeftTrigger2, 6),
-            (Button::RightTrigger2, 7),
-            (Button::Select, 8),
-            (Button::Start, 9),
-            (Button::Mode, 10),
-            (Button::LeftThumb, 11),
-            (Button::RightThumb, 12),
-            (Button::DPadUp, 13),
-            (Button::DPadDown, 14),
-            (Button::DPadLeft, 15),
-            (Button::DPadRight, 16),
-        ];
+        // Iterate over all buttons and map their raw codes to bits 0..31
+        // This ensures compatibility with devices having >16 buttons or non-standard mappings,
+        // mirroring the fix applied to the Linux Evdev reader.
+        for (code, btn_data) in gamepad.state().buttons() {
+            if btn_data.is_pressed() {
+                // Determine the raw code value
+                // Note: gilrs::Code implementation details may vary, but typically it wraps an integer.
+                // We attempt to use into_u32() which is common for such wrappers.
+                let raw_val: u32 = code.into_u32();
 
-        for (button, bit_pos) in button_map.iter() {
-            let pressed = gamepad.is_pressed(*button);
-            if pressed {
-                state.buttons |= 1 << bit_pos;
+                if raw_val < 32 {
+                    state.buttons |= 1 << raw_val;
+                }
             }
         }
 
@@ -163,20 +150,27 @@ impl GamepadReader for GilrsGamepadReader {
         // DEBUG: Trace inputs to identify mapping issues on Linux
         static mut LOG_SKIP: usize = 0;
         unsafe {
-            if LOG_SKIP % 60 == 0 { // Log ~1Hz
+            if LOG_SKIP % 60 == 0 {
+                // Log ~1Hz
                 // Check all axes
-                let active_axes: Vec<_> = (0..6).filter(|&i| state.axes[i] > 10 && state.axes[i] < 4085).collect();
-                
+                let active_axes: Vec<_> = (0..6)
+                    .filter(|&i| state.axes[i] > 10 && state.axes[i] < 4085)
+                    .collect();
+
                 // Check all buttons
                 let mut active_btns = Vec::new();
-                for (btn, _) in button_map.iter() {
-                    if gamepad.is_pressed(*btn) {
-                        active_btns.push(format!("{:?}", btn));
+                for (code, btn_data) in gamepad.state().buttons() {
+                    if btn_data.is_pressed() {
+                        active_btns.push(format!("{:?}", code));
                     }
                 }
 
                 if !active_axes.is_empty() || !active_btns.is_empty() {
-                    tracing::info!("[GamepadReader] Active Inputs - Axes: {:?} (indices), Buttons: {:?}", active_axes, active_btns);
+                    tracing::info!(
+                        "[GamepadReader] Active Inputs - Axes: {:?} (indices), Buttons: {:?}",
+                        active_axes,
+                        active_btns
+                    );
                 }
             }
             LOG_SKIP += 1;
@@ -209,26 +203,26 @@ use std::os::unix::io::AsRawFd;
 impl EvdevGamepadReader {
     pub fn new() -> Result<Self> {
         tracing::info!("[EvdevReader] Enumerating devices...");
-        
+
         // Find device containing "ffbeast" or related keywords
         let (_, device) = evdev::enumerate()
             .find(|(_, dev)| {
                 let name = dev.name().unwrap_or("").to_lowercase();
                 // tracing::debug!("Checking device: {}", name);
-                name.contains("ffbeast") || name.contains("wheel") 
+                name.contains("ffbeast") || name.contains("wheel")
             })
             .ok_or_else(|| anyhow!("FFBeast device not found via evdev"))?;
-            
+
         let name = device.name().unwrap_or("Unknown").to_string();
         tracing::info!("[EvdevReader] Selected device: {}", name);
-        
+
         // Log supported keys for debugging mapping
         if let Some(keys) = device.supported_keys() {
             tracing::info!("[EvdevReader] Supported Keys: {:?}", keys);
         }
 
         if let Some(axes) = device.supported_absolute_axes() {
-             tracing::info!("[EvdevReader] Supported Absolute Axes: {:?}", axes);
+            tracing::info!("[EvdevReader] Supported Absolute Axes: {:?}", axes);
         }
 
         // IMPORTANT: Set non-blocking mode to avoid freezing the polling thread
@@ -247,7 +241,7 @@ impl EvdevGamepadReader {
                 }
             }
         }
-        
+
         Ok(Self {
             device,
             state: GamepadState::default(),
@@ -263,38 +257,39 @@ impl GamepadReader for EvdevGamepadReader {
         match self.device.fetch_events() {
             Ok(events) => {
                 for event in events {
-                     match event.kind() {
+                    match event.kind() {
                         evdev::InputEventKind::Key(key) => {
-                             let code = key.code();
-                             let val = event.value(); // 0=release, 1=press, 2=repeat
-                             
-                             if val == 2 { continue; } // Ignore repeats
+                            let code = key.code();
+                            let val = event.value(); // 0=release, 1=press, 2=repeat
 
-                             
-                             // Force mapping based on observation (FFBeast usages)
-                             // Range 1: BTN_0 (0x100 / 256) -> Buttons 0..31
-                             // Range 2: BTN_JOYSTICK/TRIGGER (0x120 / 288) -> Buttons 0..31
-                             
-                             let final_bit = if code >= 256 && code < 256+32 {
-                                 Some((code - 256) as u32)
-                             } else if code >= 288 && code < 288+32 {
-                                 Some((code - 288) as u32)
-                             } else {
-                                 None
-                             };
-                             
-                             if let Some(b) = final_bit {
-                                 if val > 0 {
-                                     self.state.buttons |= 1 << b;
-                                 } else {
-                                     self.state.buttons &= !(1 << b);
-                                 }
-                             }
-                        },
+                            if val == 2 {
+                                continue;
+                            } // Ignore repeats
+
+                            // Force mapping based on observation (FFBeast usages)
+                            // Range 1: BTN_0 (0x100 / 256) -> Buttons 0..31
+                            // Range 2: BTN_JOYSTICK/TRIGGER (0x120 / 288) -> Buttons 0..31
+
+                            let final_bit = if code >= 256 && code < 256 + 32 {
+                                Some((code - 256) as u32)
+                            } else if code >= 288 && code < 288 + 32 {
+                                Some((code - 288) as u32)
+                            } else {
+                                None
+                            };
+
+                            if let Some(b) = final_bit {
+                                if val > 0 {
+                                    self.state.buttons |= 1 << b;
+                                } else {
+                                    self.state.buttons &= !(1 << b);
+                                }
+                            }
+                        }
                         evdev::InputEventKind::AbsAxis(axis) => {
                             let code = axis.0;
                             let value = event.value();
-                            
+
                             // Map Linux ABS Codes to HardwareService Axes indices (0..5)
                             // Direct mapping: hardware reports ABS_X for A3, ABS_RX for A0, etc.
                             let index = match code {
@@ -306,7 +301,7 @@ impl GamepadReader for EvdevGamepadReader {
                                 0x05 => Some(5), // ABS_RZ
                                 _ => None,
                             };
-                            
+
                             if let Some(idx) = index {
                                 // Simple normalization for now, assuming 16-bit input
                                 // TODO: Implement proper calibration reading once Evdev API is clarified
@@ -319,12 +314,12 @@ impl GamepadReader for EvdevGamepadReader {
                                     // Likely already low resolution or 0..4095
                                     raw.clamp(0.0, 4095.0) as u16
                                 };
-                                
+
                                 self.state.axes[idx] = normalized;
                             }
-                        },
+                        }
                         _ => {}
-                     }
+                    }
                 }
             }
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {
@@ -335,12 +330,16 @@ impl GamepadReader for EvdevGamepadReader {
                 // Don't return error to keep polling alive, but maybe should reconnect?
             }
         }
-        
+
         Ok(self.state.clone())
     }
-    
-    fn is_connected(&self) -> bool { true }
-    fn name(&self) -> &str { &self.name }
+
+    fn is_connected(&self) -> bool {
+        true
+    }
+    fn name(&self) -> &str {
+        &self.name
+    }
 }
 
 /// Factory function to create platform-specific gamepad reader
@@ -352,9 +351,32 @@ pub fn create_gamepad_reader() -> Result<Box<dyn GamepadReader>> {
             Ok(reader) => {
                 tracing::info!("[create_gamepad_reader] Successfully initialized EvdevReader");
                 return Ok(Box::new(reader));
-            },
+            }
             Err(e) => {
-                tracing::warn!("[create_gamepad_reader] EvdevReader failed: {}. Falling back to Gilrs.", e);
+                tracing::warn!(
+                    "[create_gamepad_reader] EvdevReader failed: {}. Falling back to Gilrs.",
+                    e
+                );
+            }
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        use crate::windows_gamepad::WindowsNativeGamepadReader;
+        // Use our custom Windows Native Input reader
+        match WindowsNativeGamepadReader::new() {
+            Ok(reader) => {
+                tracing::info!(
+                    "[create_gamepad_reader] Successfully initialized WindowsNativeGamepadReader"
+                );
+                return Ok(Box::new(reader));
+            }
+            Err(e) => {
+                tracing::warn!(
+                    "[create_gamepad_reader] WindowsNativeGamepadReader failed: {}. Falling back to Gilrs.",
+                    e
+                );
             }
         }
     }

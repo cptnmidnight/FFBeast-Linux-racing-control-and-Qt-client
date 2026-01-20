@@ -13,19 +13,47 @@
           v-model="hardware.power_limit" 
           :label="$t('setting_power_limit')" 
           :help="$t('help_power_limit')"
+          suffix="%"
           @update:model-value="saveHardware"
         />
         <BaseSlider 
           v-model="hardware.braking_limit" 
           :label="$t('setting_braking_limit')" 
           :help="$t('help_braking_limit')"
+          suffix="%"
           @update:model-value="saveHardware"
         />
         <BaseSlider 
           v-model="hardware.amplifier_gain" 
           :label="$t('setting_amplifier_gain')" 
           :help="$t('help_amplifier_gain')"
+          suffix="%"
           :max="500" 
+          @update:model-value="saveHardware"
+        />
+      </BaseCard>
+
+      <!-- Advanced Motor Config -->
+      <BaseCard :title="$t('settings_advanced')">
+        <BaseSlider 
+          v-model="hardware.encoder_cpr" 
+          :label="$t('setting_encoder_cpr')" 
+          :min="1" 
+          :max="65535" 
+          @update:model-value="saveHardware"
+        />
+        <BaseSlider 
+          v-model="hardware.speed_buffer_size" 
+          :label="$t('setting_speed_buffer')" 
+          :min="1" 
+          :max="255" 
+          @update:model-value="saveHardware"
+        />
+        <BaseSlider 
+          v-model="hardware.position_smoothing" 
+          :label="$t('setting_pos_smoothing')" 
+          suffix="%"
+          :max="255"
           @update:model-value="saveHardware"
         />
       </BaseCard>
@@ -68,12 +96,14 @@
           v-model="hardware.calibration_speed" 
           :label="$t('setting_calibration_speed')" 
           :help="$t('help_calibration_speed')"
+          suffix="%"
           @update:model-value="saveHardware"
         />
         <BaseSlider 
           v-model="hardware.calibration_magnitude" 
           :label="$t('setting_calibration_magnitude')" 
           :help="$t('help_calibration_magnitude')"
+          suffix="%"
           @update:model-value="saveHardware"
         />
       </BaseCard>
@@ -110,6 +140,7 @@ import BaseSwitch from '../common/BaseSwitch.vue';
 const store = useHardwareStore();
 
 const hardware = reactive({
+  encoder_cpr: store.hardware?.encoder_cpr ?? 600,
   power_limit: store.hardware?.power_limit ?? 100,
   braking_limit: store.hardware?.braking_limit ?? 100,
   amplifier_gain: store.hardware?.amplifier_gain ?? 100,
@@ -119,6 +150,8 @@ const hardware = reactive({
   proportional_gain: store.hardware?.proportional_gain ?? 100,
   integral_gain: store.hardware?.integral_gain ?? 0,
   force_enabled: store.hardware?.force_enabled ?? 1,
+  speed_buffer_size: store.hardware?.speed_buffer_size ?? 10,
+  position_smoothing: store.hardware?.position_smoothing ?? 0,
 });
 
 const encoderDir = ref(false);

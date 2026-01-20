@@ -272,7 +272,7 @@ impl WheelInterface for HardwareService {
                     let changed = last_buf_slice != &buf[..res];
 
                     if LOG_COUNT < 5 || changed {
-                        tracing::info!("HID Report [{}bytes]: {:02X?}", res, &buf[..res]);
+                        tracing::debug!("HID Report [{}bytes]: {:02X?}", res, &buf[..res]);
                         std::ptr::copy_nonoverlapping(buf.as_ptr(), last_buf_mut_ptr, buf.len());
                         LOG_COUNT += 1;
                     }
@@ -487,8 +487,11 @@ impl WheelInterface for HardwareService {
 
     #[instrument(skip(self), err)]
     fn send_effect_settings(&self, settings: EffectSettings) -> Result<()> {
-        // Individual field updates from Python enums
+        // Basic range and global strength
         self.send_field(5, 0, (settings.motion_range as u16).to_le_bytes().to_vec())?;
+        self.send_field(4, 0, vec![settings.total_effect_strength])?;
+
+        // Dampening
         self.send_field(
             8,
             0,
@@ -496,7 +499,6 @@ impl WheelInterface for HardwareService {
                 .to_le_bytes()
                 .to_vec(),
         )?;
-        self.send_field(4, 0, vec![settings.total_effect_strength])?;
         self.send_field(
             10,
             0,
@@ -505,7 +507,22 @@ impl WheelInterface for HardwareService {
                 .to_vec(),
         )?;
 
+        // Soft Stop (Protocol IDs 6, 7, 9)
+        self.send_field(6, 0, vec![settings.soft_stop_strength])?;
+        self.send_field(7, 0, vec![settings.soft_stop_range])?;
+        self.send_field(
+            9,
+            0,
+            (settings.soft_stop_dampening_strength as u16)
+                .to_le_bytes()
+                .to_vec(),
+        )?;
+
+        // Internal Features
+        self.send_field(43, 0, vec![settings.integrated_spring_strength])?;
+
         // DirectX Fields
+        self.send_field(0, 0, vec![settings.direct_x_constant_direction as u8])?;
         self.send_field(1, 0, vec![settings.direct_x_spring_strength])?;
         self.send_field(2, 0, vec![settings.direct_x_constant_strength])?;
         self.send_field(3, 0, vec![settings.direct_x_periodic_strength])?;
@@ -517,7 +534,11 @@ impl WheelInterface for HardwareService {
     fn send_hardware_settings(&self, settings: HardwareSettings) -> Result<()> {
         // Send fields individually as per protocol reference (wheel_api_lib.js)
         self.send_field(24, 0, (settings.encoder_cpr as u16).to_le_bytes().to_vec())?;
-        self.send_field(26, 0, (settings.integral_gain as u16).to_le_bytes().to_vec())?;
+        self.send_field(
+            26,
+            0,
+            (settings.integral_gain as u16).to_le_bytes().to_vec(),
+        )?;
         self.send_field(25, 0, vec![settings.proportional_gain])?;
         self.send_field(11, 0, vec![settings.force_enabled])?;
         self.send_field(12, 0, vec![settings.debug_torque])?;
@@ -532,7 +553,7 @@ impl WheelInterface for HardwareService {
         self.send_field(21, 0, vec![settings.encoder_direction as u8])?;
         self.send_field(22, 0, vec![settings.force_direction as u8])?;
         self.send_field(23, 0, vec![settings.pole_pairs])?;
-        
+
         Ok(())
     }
 
@@ -550,6 +571,13 @@ impl WheelInterface for HardwareService {
         for i in 0..32 {
             self.send_field(29, i as u8, vec![settings.button_mode[i]])?;
         }
+
+        // SPI Settings (Protocol IDs 30, 31, 32, 33)
+        self.send_field(30, 0, vec![settings.spi_mode])?;
+        self.send_field(31, 0, vec![settings.spi_latch_mode])?;
+        self.send_field(32, 0, vec![settings.spi_latch_delay])?;
+        self.send_field(33, 0, vec![settings.spi_clk_pulse_length])?;
+
         Ok(())
     }
 

@@ -15,6 +15,36 @@
         />
       </div>
     </div>
+
+    <!-- SPI Configuration (Visible for all SPI modes) -->
+    <BaseCard v-if="extensionMode >= 1" :title="$t('group_spi')">
+      <div class="spi-grid">
+        <BaseSelect 
+          v-model="spiSettings.spi_mode" 
+          :label="$t('setting_spi_mode')"
+          :options="spiModeOptions"
+          @update:model-value="saveSpi"
+        />
+        <BaseSelect 
+          v-model="spiSettings.spi_latch_mode" 
+          :label="$t('setting_spi_latch')"
+          :options="latchModeOptions"
+          @update:model-value="saveSpi"
+        />
+        <BaseSlider 
+          v-model="spiSettings.spi_latch_delay" 
+          :label="$t('setting_spi_latch_delay')"
+          suffix="µs"
+          @update:model-value="saveSpi"
+        />
+        <BaseSlider 
+          v-model="spiSettings.spi_clk_pulse_length" 
+          :label="$t('setting_spi_pulse')"
+          suffix="µs"
+          @update:model-value="saveSpi"
+        />
+      </div>
+    </BaseCard>
     
     <div class="card wide protocol-info-box">
       <h3 class="info-title">📘 {{ $t(currentModeTitle) }}</h3>
@@ -43,34 +73,76 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, reactive, watch } from 'vue';
 import { useHardwareStore } from '../../stores/hardware';
 import BaseSelect from '../common/BaseSelect.vue';
+import BaseCard from '../common/BaseCard.vue';
+import BaseSlider from '../common/BaseSlider.vue';
 
 const store = useHardwareStore();
 const extensionMode = ref(store.gpio?.extension_mode ?? 0);
 
+const spiSettings = reactive({
+  spi_mode: store.gpio?.spi_mode ?? 0,
+  spi_latch_mode: store.gpio?.spi_latch_mode ?? 0,
+  spi_latch_delay: store.gpio?.spi_latch_delay ?? 5,
+  spi_clk_pulse_length: store.gpio?.spi_clk_pulse_length ?? 5,
+});
+
 const modeOptions = [
   { label: 'mode_none', value: 0 },
-  { label: 'mode_buttons', value: 1 },
-  { label: 'mode_spi_tm', value: 2 },
-  { label: 'mode_spi_fanatec', value: 3 },
+  { label: 'mode_spi_custom', value: 1 },
+  { label: 'mode_spi_3xcd4021', value: 2 },
+  { label: 'mode_spi_3xsn74hc165', value: 3 },
+  { label: 'mode_spi_tm', value: 4 },
+  { label: 'mode_spi_vpc', value: 5 },
 ];
 
-const titleKeys = ['mode_none', 'mode_buttons', 'mode_spi_tm', 'mode_spi_fanatec'];
-const detailKeys = ['none', 'buttons', 'tm', 'fanatec'];
+const spiModeOptions = [
+  { label: 'Mode 0', value: 0 },
+  { label: 'Mode 1', value: 1 },
+  { label: 'Mode 2', value: 2 },
+  { label: 'Mode 3', value: 3 },
+];
+
+const latchModeOptions = [
+  { label: 'Latch UP', value: 0 },
+  { label: 'Latch DOWN', value: 1 },
+];
+
+const titleKeys = ['mode_none', 'mode_spi_custom', 'mode_spi_3xcd4021', 'mode_spi_3xsn74hc165', 'mode_spi_tm', 'mode_spi_vpc'];
+const detailKeys = ['none', 'custom', 'tm_style', '165_style', 'tm', 'vpc'];
 
 const currentModeTitle = computed(() => titleKeys[extensionMode.value] || 'mode_none');
 const currentModeDetail = computed(() => detailKeys[extensionMode.value] || 'none');
 
 const handleModeChange = async (value: number) => {
-  console.log(`[ProtocolTab] Extension mode changed to:`, value);
   if (store.gpio) {
     await store.updateGPIO({
       extension_mode: value
     });
   }
 };
+
+const saveSpi = async () => {
+  if (store.gpio) {
+    await store.updateGPIO({
+      ...spiSettings
+    });
+  }
+};
+
+watch(() => store.gpio, (newVal) => {
+  if (newVal) {
+    extensionMode.value = newVal.extension_mode;
+    Object.assign(spiSettings, {
+      spi_mode: newVal.spi_mode,
+      spi_latch_mode: newVal.spi_latch_mode,
+      spi_latch_delay: newVal.spi_latch_delay,
+      spi_clk_pulse_length: newVal.spi_clk_pulse_length,
+    });
+  }
+}, { deep: true });
 </script>
 
 <style scoped>
@@ -79,6 +151,12 @@ const handleModeChange = async (value: number) => {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.spi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
 }
 
 .card.wide {

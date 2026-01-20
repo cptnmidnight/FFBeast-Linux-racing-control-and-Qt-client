@@ -1,4 +1,6 @@
 pub mod gamepad_reader;
+#[cfg(target_os = "windows")]
+pub mod windows_gamepad;
 pub mod hardware_service;
 pub mod models;
 pub mod wheel_interface;
