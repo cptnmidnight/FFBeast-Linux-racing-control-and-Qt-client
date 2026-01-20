@@ -348,11 +348,17 @@ impl WheelInterface for HardwareService {
                             if gamepad_state.buttons != 0
                                 || gamepad_state.axes.iter().any(|&v| v > 0)
                             {
-                                tracing::debug!(
-                                    "Gamepad data: buttons=0x{:08X} axes={:?}",
-                                    gamepad_state.buttons,
-                                    gamepad_state.axes
-                                );
+                                static PROCESS_COUNTER: std::sync::atomic::AtomicU32 =
+                                    std::sync::atomic::AtomicU32::new(0);
+                                let count = PROCESS_COUNTER
+                                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                                if count % 120 == 0 {
+                                    tracing::trace!(
+                                        "Gamepad data: buttons=0x{:08X} axes={:?}",
+                                        gamepad_state.buttons,
+                                        gamepad_state.axes
+                                    );
+                                }
                             }
                         }
                     }

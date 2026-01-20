@@ -1,4 +1,5 @@
-use enigo::{Direction, Enigo, Key, Keyboard, Settings};
+use crate::native_keyboard::NativeKeyboard;
+use crate::virtual_key::parse_key;
 use ffbeast_controller::models::wheel_status::WheelStatus;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -17,8 +18,7 @@ pub struct KeyMapping {
 pub struct KeyboardService {
     active: Mutex<bool>,
     mappings: Mutex<Vec<KeyMapping>>,
-    active_keys: Mutex<HashSet<String>>, // Track triggered Mapping IDs
-    enigo: Mutex<Enigo>,
+    active_keys: Mutex<HashSet<String>>,
 }
 
 impl KeyboardService {
@@ -27,25 +27,48 @@ impl KeyboardService {
             active: Mutex::new(false),
             mappings: Mutex::new(Vec::new()),
             active_keys: Mutex::new(HashSet::new()),
-            enigo: Mutex::new(Enigo::new(&Settings::default()).expect("Failed to init Enigo")),
         }
     }
 
     pub fn set_mappings(&self, new_mappings: Vec<KeyMapping>) {
+        tracing::info!("KeyboardService: Setting {} mappings", new_mappings.len());
+        for (i, mapping) in new_mappings.iter().enumerate() {
+            tracing::info!(
+                "  Mapping {}: {} {} -> {} (trigger: {})",
+                i,
+                mapping.source_type,
+                mapping.index,
+                mapping.key,
+                mapping.trigger
+            );
+        }
         let mut m = self.mappings.lock().unwrap();
         *m = new_mappings;
-        // In a real scenario, we should release currently held keys if their mapping is removed.
-        // For simplicity, we assume user stops service before reconfiguring.
         self.active_keys.lock().unwrap().clear();
     }
 
     pub fn set_active(&self, active: bool) {
+        tracing::info!("KeyboardService: Setting active = {}", active);
         *self.active.lock().unwrap() = active;
         if !active {
-            // Release all keys on stop?
-            // To be safe, we could iterate active_keys and release.
-            // But we need the Mapping object to know WHICH key.
-            // For now, we leave it simple.
+            // Release all currently held keys
+            let active_state = self.active_keys.lock().unwrap();
+            let mappings = self.mappings.lock().unwrap();
+
+            tracing::info!(
+                "KeyboardService: Releasing {} held keys",
+                active_state.len()
+            );
+            for id in active_state.iter() {
+                if let Some(map) = mappings.iter().find(|m| &m.id == id) {
+                    if let Some(vk) = parse_key(&map.key) {
+                        let _ = NativeKeyboard::send_key(vk, false);
+                    }
+                }
+            }
+        } else {
+            let count = self.mappings.lock().unwrap().len();
+            tracing::info!("KeyboardService: Service activated with {} mappings", count);
         }
     }
 
@@ -58,13 +81,28 @@ impl KeyboardService {
             return;
         }
 
+        // Debug: Log every ~1 second to confirm we're processing
+        static PROCESS_COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+        let count = PROCESS_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        if count % 120 == 0 {
+            tracing::info!(
+                "KeyboardService: Processing - buttons: 0x{:08X}, axes: [{}, {}, {}, {}, {}, {}]",
+                status.buttons,
+                status.adc.get(0).unwrap_or(&0),
+                status.adc.get(1).unwrap_or(&0),
+                status.adc.get(2).unwrap_or(&0),
+                status.adc.get(3).unwrap_or(&0),
+                status.adc.get(4).unwrap_or(&0),
+                status.adc.get(5).unwrap_or(&0)
+            );
+        }
+
         let inputs_to_process = {
             let m = self.mappings.lock().unwrap();
             m.clone()
         };
 
         let mut active_state = self.active_keys.lock().unwrap();
-        let mut enigo = self.enigo.lock().unwrap();
 
         for map in inputs_to_process {
             let is_triggered = match map.source_type.as_str() {
@@ -90,47 +128,29 @@ impl KeyboardService {
             let was_triggered = active_state.contains(&map.id);
 
             if is_triggered && !was_triggered {
-                if let Some(k) = parse_key(&map.key) {
+                if let Some(vk) = parse_key(&map.key) {
                     tracing::info!(
-                        "KeyboardService: Triggering Key Press: {:?} (ID: {})",
-                        k,
-                        map.id
+                        "KeyboardService: Triggering Key Press: {:?} (ID: {}, source: {} {})",
+                        vk,
+                        map.id,
+                        map.source_type,
+                        map.index
                     );
-                    let _ = enigo.key(k, Direction::Press);
+                    match NativeKeyboard::send_key(vk, true) {
+                        Ok(_) => tracing::info!("  -> Key press successful"),
+                        Err(e) => tracing::error!("  -> Key press FAILED: {}", e),
+                    }
                 }
                 active_state.insert(map.id.clone());
             } else if !is_triggered && was_triggered {
-                if let Some(k) = parse_key(&map.key) {
-                    tracing::info!("KeyboardService: Releasing Key: {:?} (ID: {})", k, map.id);
-                    let _ = enigo.key(k, Direction::Release);
+                if let Some(vk) = parse_key(&map.key) {
+                    tracing::info!("KeyboardService: Releasing Key: {:?} (ID: {})", vk, map.id);
+                    match NativeKeyboard::send_key(vk, false) {
+                        Ok(_) => {}
+                        Err(e) => tracing::error!("  -> Key release FAILED: {}", e),
+                    }
                 }
                 active_state.remove(&map.id);
-            }
-        }
-    }
-}
-
-fn parse_key(k: &str) -> Option<Key> {
-    let upper = k.to_uppercase();
-    match upper.as_str() {
-        "SPACE" => Some(Key::Space),
-        "ENTER" | "RETURN" => Some(Key::Return),
-        "TAB" => Some(Key::Tab),
-        "ESC" | "ESCAPE" => Some(Key::Escape),
-        "BACKSPACE" => Some(Key::Backspace),
-        "UP" => Some(Key::UpArrow),
-        "DOWN" => Some(Key::DownArrow),
-        "LEFT" => Some(Key::LeftArrow),
-        "RIGHT" => Some(Key::RightArrow),
-        "SHIFT" => Some(Key::Shift),
-        "CTRL" | "CONTROL" => Some(Key::Control),
-        "ALT" => Some(Key::Alt),
-        _ => {
-            // Single char
-            if k.len() == 1 {
-                Some(Key::Unicode(k.chars().next().unwrap()))
-            } else {
-                None
             }
         }
     }

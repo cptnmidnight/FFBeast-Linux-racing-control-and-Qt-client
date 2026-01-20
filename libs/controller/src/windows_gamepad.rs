@@ -325,7 +325,7 @@ impl GamepadReader for WindowsNativeGamepadReader {
 
             // High-frequency debug logging (approx once per second at 60Hz)
             if self.read_count % 60 == 0 {
-                tracing::debug!(
+                tracing::trace!(
                     "[DirectInput Raw] X:{} Y:{} Z:{} Rx:{} Ry:{} Rz:{} Buttons:{:08x}",
                     state.lX,
                     state.lY,

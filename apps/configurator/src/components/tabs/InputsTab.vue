@@ -29,6 +29,27 @@
             :max="32767" 
             @update:model-value="v => updateMax(index, v)"
           />
+          <BaseSlider 
+            :model-value="store.adc?.raxis_smoothing[index] ?? 0" 
+            :label="$t('setting_axis_smoothing') || 'Smoothing'" 
+            :max="100" 
+            suffix="%"
+            @update:model-value="v => updateSmoothing(index, v)"
+          />
+          <BaseSlider 
+            :model-value="store.adc?.raxis_to_button_low[index] ?? 0" 
+            :label="$t('setting_axis_btn_low') || 'Button Low'" 
+            :max="100" 
+            suffix="%"
+            @update:model-value="v => updateBtnLow(index, v)"
+          />
+          <BaseSlider 
+            :model-value="store.adc?.raxis_to_button_high[index] ?? 100" 
+            :label="$t('setting_axis_btn_high') || 'Button High'" 
+            :max="100" 
+            suffix="%"
+            @update:model-value="v => updateBtnHigh(index, v)"
+          />
           <BaseSwitch 
             :model-value="store.adc?.raxis_invert[index] === 1" 
             :label="$t('setting_axis_invert')" 
@@ -104,7 +125,7 @@ import BaseSelect from '../common/BaseSelect.vue';
 import type { AxisMapping } from '../../models/AxisMapping';
 
 const store = useHardwareStore();
-const analogValues = computed(() => store.status?.adc ?? Array(8).fill(0));
+// const analogValues = computed(() => store.status?.adc ?? Array(8).fill(0));
 
 const activeIndices = computed(() => {
   return [0, 1, 2, 3, 4, 5].filter(i => {
@@ -146,7 +167,7 @@ const initConfig = () => {
   }
 };
 
-const getAxisName = (index: number) => axisNames.value[index] || DEFAULT_NAMES[index];
+// const getAxisName = (index: number) => axisNames.value[index] || DEFAULT_NAMES[index];
 
 const updateMin = (idx: number, val: number) => {
   if (!store.adc) return;
@@ -166,8 +187,28 @@ const updateInvert = (idx: number, val: boolean) => {
   if (!store.adc) return;
   const invs = [...store.adc.raxis_invert];
   invs[idx] = val ? 1 : 0;
-  console.log(`[InputsTab] Updating axis ${idx} invert to:`, val, '(value:', invs[idx], ')');
   store.updateADC({ raxis_invert: invs });
+};
+
+const updateSmoothing = (idx: number, val: number) => {
+  if (!store.adc) return;
+  const vals = [...store.adc.raxis_smoothing];
+  vals[idx] = val;
+  store.updateADC({ raxis_smoothing: vals });
+};
+
+const updateBtnLow = (idx: number, val: number) => {
+  if (!store.adc) return;
+  const vals = [...store.adc.raxis_to_button_low];
+  vals[idx] = val;
+  store.updateADC({ raxis_to_button_low: vals });
+};
+
+const updateBtnHigh = (idx: number, val: number) => {
+  if (!store.adc) return;
+  const vals = [...store.adc.raxis_to_button_high];
+  vals[idx] = val;
+  store.updateADC({ raxis_to_button_high: vals });
 };
 
 const buttonOptions = [
@@ -188,9 +229,58 @@ const closeModal = () => {
   editingIdx.value = null;
 };
 
-const saveMapping = () => {
+const saveMapping = async () => {
+  // Save to localStorage
   localStorage.setItem('ffbeast_axis_names', JSON.stringify(axisNames.value));
   localStorage.setItem('ffbeast_axis_mappings', JSON.stringify(mappings.value));
+  
+  // Convert to KeyMapping format and send to backend
+  const keyMappings: any[] = [];
+  
+  // Get the actual hardware axis indices
+  const indices = activeIndices.value;
+  
+  mappings.value.forEach((mapping, arrayIdx) => {
+    // Get the real hardware axis index (not the array index)
+    const actualAxisIndex = indices[arrayIdx];
+    if (actualAxisIndex === undefined) return;
+    
+    // High threshold mapping
+    if (mapping.keyHigh) {
+      keyMappings.push({
+        id: `axis_${actualAxisIndex}_high_${mapping.keyHigh}`,
+        source_type: 'axis',
+        index: actualAxisIndex,  // Use actual hardware index
+        trigger: 'high',
+        key: mapping.keyHigh,
+        threshold: 3500
+      });
+    }
+    
+    // Low threshold mapping
+    if (mapping.keyLow) {
+      keyMappings.push({
+        id: `axis_${actualAxisIndex}_low_${mapping.keyLow}`,
+        source_type: 'axis',
+        index: actualAxisIndex,  // Use actual hardware index
+        trigger: 'low',
+        key: mapping.keyLow,
+        threshold: 500
+      });
+    }
+  });
+  
+  // Send to backend
+  if (keyMappings.length > 0) {
+    try {
+      const { HardwareService } = await import('../../services/hardware_service');
+      await HardwareService.setKeyboardMapping(keyMappings);
+      store.log('info', `Configured ${keyMappings.length} axis keyboard mappings`);
+    } catch (err) {
+      store.log('error', `Failed to set keyboard mappings: ${err}`);
+    }
+  }
+  
   closeModal();
 };
 
@@ -385,5 +475,40 @@ onMounted(initConfig);
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
+}
+
+.btn-outline,
+.btn-primary {
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.btn-outline:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--text-main);
+  color: var(--text-main);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: var(--bg-main);
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+}
+
+.btn-primary:hover {
+  background: var(--primary);
+  box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
+  transform: translateY(-1px);
 }
 </style>

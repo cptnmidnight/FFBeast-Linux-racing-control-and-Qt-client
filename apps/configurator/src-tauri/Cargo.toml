@@ -21,4 +21,4 @@ anyhow = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "registry", "fmt"] }
 ffbeast-controller = { path = "../../../libs/controller" }
-enigo = "0.6.1"
+windows-sys = { version = "0.52", features = ["Win32_UI_Input_KeyboardAndMouse", "Win32_Foundation"] }

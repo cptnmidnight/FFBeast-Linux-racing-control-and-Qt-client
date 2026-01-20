@@ -7,6 +7,12 @@ use tauri::{Emitter, State};
 use tracing::{info, instrument};
 use tracing_subscriber::prelude::*;
 
+mod keyboard_service;
+mod native_keyboard;
+mod virtual_key;
+
+use keyboard_service::{KeyMapping, KeyboardService};
+
 static APP_HANDLE: OnceLock<tauri::AppHandle> = OnceLock::new();
 static MIN_LOG_LEVEL: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(3); // Default to INFO (3)
 
@@ -47,6 +53,10 @@ impl tracing::field::Visit for LogVisitor {
     fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
         if field.name() == "message" {
             self.message = format!("{:?}", value);
+            // Remove surrounding quotes if present
+            if self.message.starts_with('"') && self.message.ends_with('"') {
+                self.message = self.message[1..self.message.len() - 1].to_string();
+            }
         }
     }
 
@@ -59,7 +69,7 @@ impl tracing::field::Visit for LogVisitor {
 
 struct TauriLogLayer;
 
-impl<S> tracing_subscriber::Layer<S> for TauriLogLayer
+impl<S> tracing_subscriber::layer::Layer<S> for TauriLogLayer
 where
     S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
 {
@@ -68,6 +78,7 @@ where
         event: &tracing::Event<'_>,
         _ctx: tracing_subscriber::layer::Context<'_, S>,
     ) {
+        // Only emit if APP_HANDLE is available (prevents deadlock and buffering issues)
         if let Some(handle) = APP_HANDLE.get() {
             let level_str = event.metadata().level().to_string().to_lowercase();
             let mut visitor = LogVisitor::new();
@@ -83,11 +94,9 @@ where
                 );
             }
         }
+        // If APP_HANDLE is not available yet, logs just go to console (not frontend)
     }
 }
-
-mod keyboard_service;
-use keyboard_service::{KeyMapping, KeyboardService};
 
 #[tauri::command]
 fn check_hardware(hardware: State<'_, Arc<HardwareService>>) -> bool {
@@ -277,7 +286,12 @@ fn send_direct_control(
 }
 
 #[tauri::command]
-fn toggle_keyboard_service(
+fn get_keyboard_service_active(service: State<'_, Arc<KeyboardService>>) -> bool {
+    service.is_active()
+}
+
+#[tauri::command]
+fn set_keyboard_service_active(
     service: State<'_, Arc<KeyboardService>>,
     enabled: bool,
 ) -> Result<(), String> {
@@ -316,6 +330,7 @@ fn set_min_log_level(level: u8) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Initialize tracing FIRST, before any other code that might log
     let env_filter = tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
         "info,ffbeast_controller=trace,ffbeast_ui_lib=trace,windows_gamepad=trace".into()
     });
@@ -333,30 +348,28 @@ pub fn run() {
     std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
 
     let hardware = Arc::new(HardwareService::new());
-    let hardware_clone = hardware.clone();
-
-    let kb_service = Arc::new(KeyboardService::new());
-    let kb_service_clone = kb_service.clone();
+    let keyboard = Arc::new(KeyboardService::new());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .manage(hardware)
-        .manage(kb_service)
+        .manage(hardware.clone())
+        .manage(keyboard.clone())
         .setup(move |app| {
+            // Store app handle for log forwarding
+            let _ = APP_HANDLE.set(app.handle().clone());
+
+            let hw = hardware.clone();
+            let kb = keyboard.clone();
             let handle = app.handle().clone();
-            let _ = APP_HANDLE.set(handle.clone());
 
             std::thread::spawn(move || {
                 let mut last_read_failed = false;
                 loop {
-                    if hardware_clone.is_connected() {
-                        match hardware_clone.read_status() {
+                    if hw.is_connected() {
+                        match hw.read_status() {
                             Ok(status) => {
-                                if status.adc.iter().any(|&v| v > 0) {
-                                    // tracing::debug!("Telemetry ADC active: {:?}", status.adc);
-                                }
+                                kb.process(&status);
                                 let _ = handle.emit("wheel-status", &status);
-                                kb_service_clone.process(&status);
                                 if last_read_failed {
                                     info!("Telemetry resumed successfully.");
                                     last_read_failed = false;
@@ -399,7 +412,8 @@ pub fn run() {
             update_gpio_settings,
             update_adc_settings,
             activate_license,
-            toggle_keyboard_service,
+            set_keyboard_service_active,
+            get_keyboard_service_active,
             set_keyboard_mapping,
             switch_to_dfu,
             send_direct_control,
