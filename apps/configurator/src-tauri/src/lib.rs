@@ -1,7 +1,7 @@
 use ffbeast_controller::{
     AdcSettings, EffectSettings, GpioSettings, HardwareService, HardwareSettings, WheelInterface,
 };
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, OnceLock};
 use tauri::{Emitter, State};
 use tracing::{info, instrument};
@@ -9,6 +9,27 @@ use tracing_subscriber::prelude::*;
 
 static APP_HANDLE: OnceLock<tauri::AppHandle> = OnceLock::new();
 static MIN_LOG_LEVEL: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(3); // Default to INFO (3)
+
+struct GlobalLevelFilter;
+
+impl<S> tracing_subscriber::layer::Filter<S> for GlobalLevelFilter {
+    fn enabled(
+        &self,
+        metadata: &tracing::Metadata<'_>,
+        _ctx: &tracing_subscriber::layer::Context<'_, S>,
+    ) -> bool {
+        let level_num = match *metadata.level() {
+            tracing::Level::ERROR => 1,
+            tracing::Level::WARN => 2,
+            tracing::Level::INFO => 3,
+            tracing::Level::DEBUG => 4,
+            tracing::Level::TRACE => 5,
+        };
+
+        let min_level = MIN_LOG_LEVEL.load(Ordering::Relaxed);
+        level_num <= min_level
+    }
+}
 
 struct LogVisitor {
     message: String,
@@ -47,27 +68,8 @@ where
         event: &tracing::Event<'_>,
         _ctx: tracing_subscriber::layer::Context<'_, S>,
     ) {
-        let metadata = event.metadata();
-        let level = metadata.level();
-
-        // Level mapping: Error=1, Warn=2, Info=3, Debug=4, Trace=5
-        // We want to filter out logs more verbose than our setting.
-        // If MIN_LOG_LEVEL is 3 (Info), we only want 1, 2, 3.
-        let level_num = match *level {
-            tracing::Level::ERROR => 1,
-            tracing::Level::WARN => 2,
-            tracing::Level::INFO => 3,
-            tracing::Level::DEBUG => 4,
-            tracing::Level::TRACE => 5,
-        };
-
-        let min_level = MIN_LOG_LEVEL.load(std::sync::atomic::Ordering::Relaxed);
-        if level_num > min_level {
-            return;
-        }
-
         if let Some(handle) = APP_HANDLE.get() {
-            let level_str = level.to_string().to_lowercase();
+            let level_str = event.metadata().level().to_string().to_lowercase();
             let mut visitor = LogVisitor::new();
             event.record(&mut visitor);
 
@@ -314,13 +316,14 @@ fn set_min_log_level(level: u8) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| "info,ffbeast_controller=debug,ffbeast_ui_lib=debug".into());
+    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        "info,ffbeast_controller=trace,ffbeast_ui_lib=trace,windows_gamepad=trace".into()
+    });
 
     tracing_subscriber::registry()
         .with(env_filter)
-        .with(tracing_subscriber::fmt::layer())
-        .with(TauriLogLayer)
+        .with(tracing_subscriber::fmt::layer().with_filter(GlobalLevelFilter))
+        .with(TauriLogLayer.with_filter(GlobalLevelFilter))
         .init();
 
     info!("Starting FFBeast UI");
