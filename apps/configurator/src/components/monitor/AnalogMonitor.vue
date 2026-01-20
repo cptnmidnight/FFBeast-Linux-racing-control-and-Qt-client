@@ -4,20 +4,44 @@
       <h3>{{ $t('analog_inputs_title') }}</h3>
     </div>
     <div class="analog-grid">
-      <div v-for="(val, index) in values" :key="index" class="analog-item">
+<div v-for="(val, index) in values" :key="index" class="analog-item" v-show="isVisible(index)">
         <div class="analog-bar-wrapper">
           <div class="analog-bar" :style="{ height: (val / 4095 * 100) + '%' }"></div>
         </div>
-        <span class="analog-label">A{{ index }}</span>
+        <span class="analog-label">{{ getLabel(index) }}</span>
       </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   values: number[];
+  pinModes?: number[];
 }>();
+
+const axisLabels = ['X', 'Y', 'Z', 'RX', 'RY', 'RZ'];
+
+// Map Logical Axis Index -> Physical Pin Index
+// Backend maps: A3->X(0), A4->Y(1), A5->Z(2), A0->RX(3), A1->RY(4), A2->RZ(5)
+const axisToPinMap = [3, 4, 5, 0, 1, 2];
+
+const getLabel = (index: number) => {
+  return axisLabels[index] || `A${index}`;
+};
+
+const isVisible = (index: number) => {
+  if (!props.pinModes || props.pinModes.length === 0) return true;
+  
+  // Check the physical pin that feeds this axis
+  const pinIndex = axisToPinMap[index];
+  if (pinIndex !== undefined && pinIndex < props.pinModes.length) {
+      return props.pinModes[pinIndex] === 2; // 2 = Analog
+  }
+  
+  // Fallback direct check if map fails
+  return props.pinModes[index] === 2;
+};
 </script>
 
 <style scoped>

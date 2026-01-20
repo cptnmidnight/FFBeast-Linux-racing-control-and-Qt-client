@@ -195,7 +195,6 @@ impl GamepadReader for GilrsGamepadReader {
     }
 }
 
-/// Linux-specific Evdev reader (Direct /dev/input/event* access)
 #[cfg(target_os = "linux")]
 pub struct EvdevGamepadReader {
     device: evdev::Device,
@@ -226,6 +225,10 @@ impl EvdevGamepadReader {
         // Log supported keys for debugging mapping
         if let Some(keys) = device.supported_keys() {
             tracing::info!("[EvdevReader] Supported Keys: {:?}", keys);
+        }
+
+        if let Some(axes) = device.supported_absolute_axes() {
+             tracing::info!("[EvdevReader] Supported Absolute Axes: {:?}", axes);
         }
 
         // IMPORTANT: Set non-blocking mode to avoid freezing the polling thread
@@ -260,35 +263,68 @@ impl GamepadReader for EvdevGamepadReader {
         match self.device.fetch_events() {
             Ok(events) => {
                 for event in events {
-                     if let evdev::InputEventKind::Key(key) = event.kind() {
-                         let code = key.code();
-                         let val = event.value(); // 0=release, 1=press, 2=repeat
-                         
-                         if val == 2 { continue; } // Ignore repeats
-                         
-                         if val == 2 { continue; } // Ignore repeats
-                         
-                         // Force mapping based on observation (FFBeast usages)
-                         // Range 1: BTN_0 (0x100 / 256) -> Buttons 0..31
-                         // Range 2: BTN_JOYSTICK/TRIGGER (0x120 / 288) -> Buttons 0..31
-                         
-                         let final_bit = if code >= 256 && code < 256+32 {
-                             Some((code - 256) as u32)
-                         } else if code >= 288 && code < 288+32 {
-                             Some((code - 288) as u32)
-                         } else {
-                             None
-                         };
-                         
-                         if let Some(b) = final_bit {
-                             if val > 0 {
-                                 self.state.buttons |= 1 << b;
+                     match event.kind() {
+                        evdev::InputEventKind::Key(key) => {
+                             let code = key.code();
+                             let val = event.value(); // 0=release, 1=press, 2=repeat
+                             
+                             if val == 2 { continue; } // Ignore repeats
+
+                             
+                             // Force mapping based on observation (FFBeast usages)
+                             // Range 1: BTN_0 (0x100 / 256) -> Buttons 0..31
+                             // Range 2: BTN_JOYSTICK/TRIGGER (0x120 / 288) -> Buttons 0..31
+                             
+                             let final_bit = if code >= 256 && code < 256+32 {
+                                 Some((code - 256) as u32)
+                             } else if code >= 288 && code < 288+32 {
+                                 Some((code - 288) as u32)
                              } else {
-                                 self.state.buttons &= !(1 << b);
+                                 None
+                             };
+                             
+                             if let Some(b) = final_bit {
+                                 if val > 0 {
+                                     self.state.buttons |= 1 << b;
+                                 } else {
+                                     self.state.buttons &= !(1 << b);
+                                 }
                              }
-                         }
+                        },
+                        evdev::InputEventKind::AbsAxis(axis) => {
+                            let code = axis.0;
+                            let value = event.value();
+                            
+                            // Map Linux ABS Codes to HardwareService Axes indices (0..5)
+                            // Direct mapping: hardware reports ABS_X for A3, ABS_RX for A0, etc.
+                            let index = match code {
+                                0x00 => Some(0), // ABS_X
+                                0x01 => Some(1), // ABS_Y
+                                0x02 => Some(2), // ABS_Z
+                                0x03 => Some(3), // ABS_RX
+                                0x04 => Some(4), // ABS_RY
+                                0x05 => Some(5), // ABS_RZ
+                                _ => None,
+                            };
+                            
+                            if let Some(idx) = index {
+                                // Simple normalization for now, assuming 16-bit input
+                                // TODO: Implement proper calibration reading once Evdev API is clarified
+                                let raw = value as f32;
+                                let normalized = if raw.abs() > 4096.0 {
+                                    // Likely 16-bit range (-32768..32767 or 0..65535)
+                                    // Map to 0..4095
+                                    ((raw + 32768.0) / 65535.0 * 4095.0).clamp(0.0, 4095.0) as u16
+                                } else {
+                                    // Likely already low resolution or 0..4095
+                                    raw.clamp(0.0, 4095.0) as u16
+                                };
+                                
+                                self.state.axes[idx] = normalized;
+                            }
+                        },
+                        _ => {}
                      }
-                     // TODO: Add Absolute Axis implementation if needed
                 }
             }
             Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => {

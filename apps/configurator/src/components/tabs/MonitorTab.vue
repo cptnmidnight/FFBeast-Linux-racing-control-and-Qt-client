@@ -43,7 +43,7 @@
     </div>
 
     <div class="middle-row">
-      <AnalogMonitor :values="analogValues" />
+      <AnalogMonitor :values="analogValues" :pinModes="pinModes" />
       <ButtonsGrid :buttons="currentButtons" />
     </div>
 
@@ -77,6 +77,7 @@ const currentPosition = computed(() => store.status?.position ?? 0);
 const currentTorque = computed(() => store.status?.torque ?? 0);
 const currentButtons = computed(() => store.status?.buttons ?? 0);
 const analogValues = computed(() => store.status?.adc ?? [0, 0, 0, 0, 0, 0, 0, 0]);
+const pinModes = computed(() => store.gpio?.pin_mode ?? []); // Get pin modes for filtering
 
 const ffbEnabled = computed({
   get: () => store.hardware?.force_enabled === 1,
