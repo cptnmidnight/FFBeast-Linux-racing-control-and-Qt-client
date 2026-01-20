@@ -21,11 +21,29 @@ export const useUIStore = defineStore('ui', {
             toastMargin: 20,
             fontFamily: 'Outfit',
             fontSize: 16,
-            debugMode: false
+            minLogLevel: Number(localStorage.getItem('ffbeast_min_log_level') || '3'),
+            debugMode: localStorage.getItem('ffbeast_debug_mode') === 'true'
         }
     }),
 
     actions: {
+        async setMinLogLevel(level: number) {
+            this.settings.minLogLevel = level;
+            localStorage.setItem('ffbeast_min_log_level', String(level));
+            try {
+                const { HardwareService } = await import('../services/hardware_service');
+                await HardwareService.setMinLogLevel(level);
+            } catch (err) {
+                console.error('Failed to sync log level:', err);
+            }
+        },
+
+        async toggleDebugMode(enabled: boolean) {
+            this.settings.debugMode = enabled;
+            localStorage.setItem('ffbeast_debug_mode', String(enabled));
+            // When legacy debug mode is toggled, it might influence the min log level
+            // but for now we just keep the boolean for UI compatibility if needed
+        },
         showToast(message: string, type: Toast['type'] = 'info', duration = 3000) {
             const id = Date.now();
             this.toasts.push({ id, message, type, duration });

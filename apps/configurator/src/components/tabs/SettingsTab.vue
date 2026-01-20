@@ -62,10 +62,27 @@
       <BaseCard :title="$t('settings_advanced') || 'Advanced Settings'">
         <div class="control-group">
           <div class="label-col">
+            <span class="label">{{ $t('setting_min_log_level') }}</span>
+            <span class="desc">{{ $t('setting_min_log_level_desc') }}</span>
+          </div>
+          <BaseSelect 
+            v-model="uiStore.settings.minLogLevel" 
+            :options="logLevelOptions"
+            :use-i18n="true"
+            class="compact-select"
+            @update:model-value="uiStore.setMinLogLevel"
+          />
+        </div>
+        
+        <div class="control-group">
+          <div class="label-col">
             <span class="label">{{ $t('setting_debug_mode') }}</span>
             <span class="desc">{{ $t('setting_debug_desc') }}</span>
           </div>
-          <BaseSwitch v-model="uiStore.settings.debugMode" />
+          <BaseSwitch 
+            v-model="uiStore.settings.debugMode" 
+            @update:model-value="uiStore.toggleDebugMode"
+          />
         </div>
       </BaseCard>
 
@@ -144,6 +161,14 @@ const toastPositionOptions = [
   { label: 'toast_pos_bottom_left', value: 'bottom-left' },
 ];
 
+const logLevelOptions = [
+  { label: 'log_level_error', value: 1 },
+  { label: 'log_level_warn', value: 2 },
+  { label: 'log_level_info', value: 3 },
+  { label: 'log_level_debug', value: 4 },
+  { label: 'log_level_trace', value: 5 },
+];
+
 // Avoid semantic colors (success, error, warning)
 const accentColors = [
   '#00d4ff', // Cyan
@@ -212,6 +237,11 @@ const testToast = () => {
 .label-col .desc {
   font-size: 0.75rem;
   color: var(--text-dim);
+}
+
+.compact-select {
+  width: 220px;
+  margin-bottom: 0 !important;
 }
 
 .theme-selector {

@@ -1,9 +1,88 @@
 use ffbeast_controller::{
     AdcSettings, EffectSettings, GpioSettings, HardwareService, HardwareSettings, WheelInterface,
 };
-use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, OnceLock};
 use tauri::{Emitter, State};
 use tracing::{info, instrument};
+use tracing_subscriber::prelude::*;
+
+static APP_HANDLE: OnceLock<tauri::AppHandle> = OnceLock::new();
+static MIN_LOG_LEVEL: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(3); // Default to INFO (3)
+
+struct LogVisitor {
+    message: String,
+}
+
+impl LogVisitor {
+    fn new() -> Self {
+        Self {
+            message: String::new(),
+        }
+    }
+}
+
+impl tracing::field::Visit for LogVisitor {
+    fn record_debug(&mut self, field: &tracing::field::Field, value: &dyn std::fmt::Debug) {
+        if field.name() == "message" {
+            self.message = format!("{:?}", value);
+        }
+    }
+
+    fn record_str(&mut self, field: &tracing::field::Field, value: &str) {
+        if field.name() == "message" {
+            self.message = value.to_string();
+        }
+    }
+}
+
+struct TauriLogLayer;
+
+impl<S> tracing_subscriber::Layer<S> for TauriLogLayer
+where
+    S: tracing::Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
+{
+    fn on_event(
+        &self,
+        event: &tracing::Event<'_>,
+        _ctx: tracing_subscriber::layer::Context<'_, S>,
+    ) {
+        let metadata = event.metadata();
+        let level = metadata.level();
+
+        // Level mapping: Error=1, Warn=2, Info=3, Debug=4, Trace=5
+        // We want to filter out logs more verbose than our setting.
+        // If MIN_LOG_LEVEL is 3 (Info), we only want 1, 2, 3.
+        let level_num = match *level {
+            tracing::Level::ERROR => 1,
+            tracing::Level::WARN => 2,
+            tracing::Level::INFO => 3,
+            tracing::Level::DEBUG => 4,
+            tracing::Level::TRACE => 5,
+        };
+
+        let min_level = MIN_LOG_LEVEL.load(std::sync::atomic::Ordering::Relaxed);
+        if level_num > min_level {
+            return;
+        }
+
+        if let Some(handle) = APP_HANDLE.get() {
+            let level_str = level.to_string().to_lowercase();
+            let mut visitor = LogVisitor::new();
+            event.record(&mut visitor);
+
+            if !visitor.message.is_empty() {
+                let _ = handle.emit(
+                    "rust-log",
+                    serde_json::json!({
+                        "level": level_str,
+                        "message": visitor.message,
+                    }),
+                );
+            }
+        }
+    }
+}
 
 mod keyboard_service;
 use keyboard_service::{KeyMapping, KeyboardService};
@@ -121,9 +200,7 @@ struct HandshakeResponse {
 
 #[tauri::command]
 #[instrument(skip(hardware), err)]
-fn get_handshake(
-    hardware: State<'_, Arc<HardwareService>>,
-) -> Result<HandshakeResponse, String> {
+fn get_handshake(hardware: State<'_, Arc<HardwareService>>) -> Result<HandshakeResponse, String> {
     // Try to connect if not already connected
     if !hardware.is_connected() {
         hardware.connect().map_err(|e| e.to_string())?;
@@ -131,7 +208,9 @@ fn get_handshake(
 
     let status = hardware.read_status().map_err(|e| e.to_string())?;
     let fx = hardware.read_effect_settings().map_err(|e| e.to_string())?;
-    let hw = hardware.read_hardware_settings().map_err(|e| e.to_string())?;
+    let hw = hardware
+        .read_hardware_settings()
+        .map_err(|e| e.to_string())?;
     let gpio = hardware.read_gpio_settings().map_err(|e| e.to_string())?;
     let adc = hardware.read_adc_settings().map_err(|e| e.to_string())?;
 
@@ -227,12 +306,21 @@ fn get_versions() -> AppVersions {
     }
 }
 
+#[tauri::command]
+fn set_min_log_level(level: u8) {
+    info!("Minimum log level set to: {}", level);
+    MIN_LOG_LEVEL.store(level, std::sync::atomic::Ordering::Relaxed);
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
-        )
+    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| "info,ffbeast_controller=debug,ffbeast_ui_lib=debug".into());
+
+    tracing_subscriber::registry()
+        .with(env_filter)
+        .with(tracing_subscriber::fmt::layer())
+        .with(TauriLogLayer)
         .init();
 
     info!("Starting FFBeast UI");
@@ -253,6 +341,7 @@ pub fn run() {
         .manage(kb_service)
         .setup(move |app| {
             let handle = app.handle().clone();
+            let _ = APP_HANDLE.set(handle.clone());
 
             std::thread::spawn(move || {
                 let mut last_read_failed = false;
@@ -311,7 +400,8 @@ pub fn run() {
             set_keyboard_mapping,
             switch_to_dfu,
             send_direct_control,
-            get_versions
+            get_versions,
+            set_min_log_level
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

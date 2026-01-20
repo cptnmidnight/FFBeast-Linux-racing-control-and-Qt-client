@@ -68,6 +68,10 @@ export const HardwareService = {
         await invoke('set_keyboard_mapping', { mappings });
     },
 
+    async setMinLogLevel(level: number): Promise<void> {
+        return await invoke('set_min_log_level', { level });
+    },
+
     async getVersions(): Promise<{ app: string, controller: string }> {
         return await invoke('get_versions');
     }

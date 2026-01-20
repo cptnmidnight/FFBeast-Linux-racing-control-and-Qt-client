@@ -93,6 +93,7 @@ import SettingsTab from './components/tabs/SettingsTab.vue';
 import ToastContainer from './components/common/ToastContainer.vue';
 import BaseTooltip from './components/common/BaseTooltip.vue';
 import { useUIStore } from './stores/ui';
+import { useLogStore } from './stores/logs';
 import { useI18n } from 'vue-i18n';
 
 const store = useHardwareStore();
@@ -160,9 +161,18 @@ const handleSave = async () => {
     }
 };
 
-onMounted(() => {
+onMounted(async () => {
   store.init();
+  ui.setMinLogLevel(ui.settings.minLogLevel); // Sync initial log level
+  ui.toggleDebugMode(ui.settings.debugMode); // Sync initial debug state
   setupGlobalTooltips();
+  
+  // Listen for Rust backend logs
+  const { listen } = await import('@tauri-apps/api/event');
+  await listen<{ level: any, message: string }>('rust-log', (event) => {
+    const logStore = useLogStore();
+    logStore.addLog(event.payload.level, event.payload.message, 'backend');
+  });
 });
 
 const setupGlobalTooltips = () => {
