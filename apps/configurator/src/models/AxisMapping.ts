@@ -7,4 +7,6 @@ export interface AxisMapping {
     keyHigh: string;
     btnLow: number | null;
     btnHigh: number | null;
+    thresholdLow?: number;
+    thresholdHigh?: number;
 }

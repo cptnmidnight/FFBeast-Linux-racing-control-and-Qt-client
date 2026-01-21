@@ -8,8 +8,6 @@ use tracing::{info, instrument};
 use tracing_subscriber::prelude::*;
 
 mod keyboard_service;
-mod native_keyboard;
-mod virtual_key;
 
 use keyboard_service::{KeyMapping, KeyboardService};
 

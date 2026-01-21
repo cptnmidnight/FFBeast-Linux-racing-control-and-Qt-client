@@ -92,19 +92,46 @@
         </div>
 
         <div class="section-divider">{{ $t('axis_keyboard_mapping') }}</div>
+        
+        <div class="deadzone-monitor">
+            <div class="monitor-track">
+                <div class="monitor-fill" :style="{ width: ((currentEditingValue / 327.67)) + '%' }"></div>
+                <div class="monitor-marker marker-low" :style="{ left: ((mappings[editingIdx].thresholdLow ?? 2000) / 327.67) + '%' }"></div>
+                <div class="monitor-marker marker-high" :style="{ left: ((mappings[editingIdx].thresholdHigh ?? 30000) / 327.67) + '%' }"></div>
+            </div>
+            <div class="monitor-labels">
+                <span>0</span>
+                <span>{{ currentEditingValue }}</span>
+                <span>32767</span>
+            </div>
+        </div>
+
         <div class="form-row">
-          <BaseSelect 
-            v-model="mappings[editingIdx].keyLow" 
-            :options="keyOptions" 
-            :label="$t('axis_key_low')"
-            :use-i18n="true"
-          />
-          <BaseSelect 
-            v-model="mappings[editingIdx].keyHigh" 
-            :options="keyOptions" 
-            :label="$t('axis_key_high')"
-            :use-i18n="true"
-          />
+          <div class="mapping-group">
+             <BaseSelect 
+                v-model="mappings[editingIdx].keyLow" 
+                :options="keyOptions" 
+                :label="$t('axis_key_low')"
+                :use-i18n="true"
+             />
+             <div class="slider-mini">
+                <label>Trigger &lt; {{ mappings[editingIdx].thresholdLow }}</label>
+                <input type="range" min="0" max="32767" v-model.number="mappings[editingIdx].thresholdLow">
+             </div>
+          </div>
+          
+          <div class="mapping-group">
+             <BaseSelect 
+                v-model="mappings[editingIdx].keyHigh" 
+                :options="keyOptions" 
+                :label="$t('axis_key_high')"
+                :use-i18n="true"
+              />
+             <div class="slider-mini">
+                 <label>Trigger &gt; {{ mappings[editingIdx].thresholdHigh }}</label>
+                 <input type="range" min="0" max="32767" v-model.number="mappings[editingIdx].thresholdHigh">
+             </div>
+          </div>
         </div>
       </div>
       <template #footer>
@@ -125,7 +152,12 @@ import BaseSelect from '../common/BaseSelect.vue';
 import type { AxisMapping } from '../../models/AxisMapping';
 
 const store = useHardwareStore();
-// const analogValues = computed(() => store.status?.adc ?? Array(8).fill(0));
+
+// Live monitoring of the axis being edited
+const currentEditingValue = computed(() => {
+  if (editingIdx.value === null || !store.status?.adc) return 0;
+  return store.status.adc[editingIdx.value] ?? 0;
+});
 
 const activeIndices = computed(() => {
   return [0, 1, 2, 3, 4, 5].filter(i => {
@@ -152,22 +184,27 @@ const initConfig = () => {
 
   const savedMappings = localStorage.getItem('ffbeast_axis_mappings');
   if (savedMappings) {
-    mappings.value = JSON.parse(savedMappings);
+    // Migration: Ensure new threshold fields exist
+    mappings.value = JSON.parse(savedMappings).map((m: any) => ({
+      ...m,
+      thresholdLow: m.thresholdLow ?? 2000,
+      thresholdHigh: m.thresholdHigh ?? 30000
+    }));
   } else {
     mappings.value = Array(8).fill(0).map(() => ({
       name: '',
       min: 0,
-      max: 4095,
+      max: 32767,
       invert: false,
       keyLow: '',
       keyHigh: '',
       btnLow: null,
-      btnHigh: null
+      btnHigh: null,
+      thresholdLow: 2000,
+      thresholdHigh: 30000
     }));
   }
 };
-
-// const getAxisName = (index: number) => axisNames.value[index] || DEFAULT_NAMES[index];
 
 const updateMin = (idx: number, val: number) => {
   if (!store.adc) return;
@@ -237,35 +274,32 @@ const saveMapping = async () => {
   // Convert to KeyMapping format and send to backend
   const keyMappings: any[] = [];
   
-  // Get the actual hardware axis indices
-  const indices = activeIndices.value;
-  
-  mappings.value.forEach((mapping, arrayIdx) => {
-    // Get the real hardware axis index (not the array index)
-    const actualAxisIndex = indices[arrayIdx];
-    if (actualAxisIndex === undefined) return;
+  // Iterate activeIndices effectively
+  activeIndices.value.forEach(actualIndex => {
+    const mapping = mappings.value[actualIndex];
+    if (!mapping) return;
     
-    // High threshold mapping
+    // High threshold mapping (Deadzone End / Trigger High)
     if (mapping.keyHigh) {
       keyMappings.push({
-        id: `axis_${actualAxisIndex}_high_${mapping.keyHigh}`,
+        id: `axis_${actualIndex}_high_${mapping.keyHigh}`,
         source_type: 'axis',
-        index: actualAxisIndex,  // Use actual hardware index
+        index: actualIndex,
         trigger: 'high',
         key: mapping.keyHigh,
-        threshold: 3500
+        threshold: mapping.thresholdHigh ?? 30000
       });
     }
     
-    // Low threshold mapping
+    // Low threshold mapping (Deadzone Start / Trigger Low)
     if (mapping.keyLow) {
       keyMappings.push({
-        id: `axis_${actualAxisIndex}_low_${mapping.keyLow}`,
+        id: `axis_${actualIndex}_low_${mapping.keyLow}`,
         source_type: 'axis',
-        index: actualAxisIndex,  // Use actual hardware index
+        index: actualIndex,
         trigger: 'low',
         key: mapping.keyLow,
-        threshold: 500
+        threshold: mapping.thresholdLow ?? 2000
       });
     }
   });
@@ -510,5 +544,59 @@ onMounted(initConfig);
   background: var(--primary);
   box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
   transform: translateY(-1px);
+}
+.deadzone-monitor {
+  background: rgba(0,0,0,0.2);
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+.monitor-track {
+  height: 20px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 10px;
+  position: relative;
+  overflow: visible;
+  margin-bottom: 5px;
+}
+.monitor-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 10px;
+  transition: width 0.05s linear;
+}
+.monitor-marker {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: #fff;
+  z-index: 2;
+  box-shadow: 0 0 4px rgba(0,0,0,0.5);
+}
+.marker-low { background: #ff4444; }
+.marker-high { background: #44ff44; }
+.monitor-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+.mapping-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.slider-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.slider-mini label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+.slider-mini input {
+  width: 100%;
 }
 </style>
