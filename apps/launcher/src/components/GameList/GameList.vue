@@ -5,7 +5,8 @@ import { GameService } from '../../services/tauri';
 
 export default defineComponent({
   name: 'GameList',
-  setup() {
+  emits: ['edit-game'],
+  setup(props, { emit }) {
     const games = ref<Game[]>([]);
     const loading = ref(false);
     const error = ref<string | null>(null);
@@ -14,17 +15,7 @@ export default defineComponent({
       loading.value = true;
       error.value = null;
       try {
-        const [saved, scanned] = await Promise.all([
-          GameService.getGames().catch(() => []),
-          GameService.scanGames().catch(() => [])
-        ]);
-
-        // Merge logic
-        const gameMap = new Map<string, Game>();
-        scanned.forEach(g => gameMap.set(g.id, g));
-        saved.forEach(g => gameMap.set(g.id, g)); // Saved overrides scanned
-
-        games.value = Array.from(gameMap.values());
+        games.value = await GameService.getGames();
       } catch (e) {
         error.value = "Failed to load games";
         console.error(e);
@@ -41,6 +32,21 @@ export default defineComponent({
         }
     };
 
+    const handleEdit = (gameId: string) => {
+        emit('edit-game', gameId);
+    };
+
+    const handleDelete = async (game: Game) => {
+        if (confirm(`Tem certeza que deseja remover "${game.name}"?`)) {
+            try {
+                await GameService.deleteGame(game.id);
+                await loadGames();
+            } catch (e) {
+                alert("Erro ao remover jogo: " + e);
+            }
+        }
+    };
+
     onMounted(() => {
       loadGames();
     });
@@ -50,7 +56,9 @@ export default defineComponent({
       loading,
       error,
       loadGames,
-      handleLaunch
+      handleLaunch,
+      handleEdit,
+      handleDelete
     };
   }
 });
@@ -67,12 +75,19 @@ export default defineComponent({
 
     <div v-else class="grid">
       <div v-for="game in games" :key="game.id" class="game-card">
-        <div class="cover-placeholder">
+        <div class="cover-placeholder" v-if="!game.cover_path">
             <span class="icon">🎮</span>
+        </div>
+        <div class="cover-image" v-else>
+            <img :src="game.cover_path" :alt="game.name" />
         </div>
         <div class="info">
             <h3>{{ game.name }}</h3>
-            <button @click="handleLaunch(game.id)" class="btn-launch">{{ $t('library.launch') }}</button>
+            <div class="actions">
+                <button @click="handleLaunch(game.id)" class="btn-launch">{{ $t('library.launch') }}</button>
+                <button @click="handleEdit(game.id)" class="btn-edit" title="Editar">✏️</button>
+                <button @click="handleDelete(game)" class="btn-delete" title="Remover">🗑️</button>
+            </div>
         </div>
       </div>
     </div>
@@ -146,9 +161,26 @@ export default defineComponent({
     font-weight: 600;
 }
 
-.btn-launch {
-    margin-top: auto;
+.cover-image {
+    height: 140px;
+    overflow: hidden;
+    background: #000;
+}
+
+.cover-image img {
     width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.actions {
+    margin-top: auto;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-launch {
+    flex: 1;
     padding: 0.8rem;
     background: var(--primary-color);
     color: white;
@@ -160,6 +192,30 @@ export default defineComponent({
 
 .btn-launch:hover {
     background: var(--primary-hover);
+}
+
+.btn-edit, .btn-delete {
+    padding: 0.8rem;
+    width: 40px;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-edit:hover {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-delete:hover {
+    background: #f44336;
+    border-color: #f44336;
 }
 
 .btn-refresh {

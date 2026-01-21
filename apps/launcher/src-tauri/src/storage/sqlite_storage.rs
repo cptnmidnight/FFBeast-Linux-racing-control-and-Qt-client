@@ -25,7 +25,9 @@ impl SqliteStorage {
                 wheel_profile TEXT,
                 use_compat_layer INTEGER,
                 icon_path TEXT,
-                cover_path TEXT
+                cover_path TEXT,
+                is_steam INTEGER DEFAULT 0,
+                steam_id INTEGER
             )",
             [],
         )?;
@@ -44,9 +46,19 @@ impl SqliteStorage {
             [],
         )?;
 
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            )",
+            [],
+        )?;
+
         // Simple migration for dev
         let _ = conn.execute("ALTER TABLE games ADD COLUMN icon_path TEXT", []);
         let _ = conn.execute("ALTER TABLE games ADD COLUMN cover_path TEXT", []);
+        let _ = conn.execute("ALTER TABLE games ADD COLUMN is_steam INTEGER DEFAULT 0", []);
+        let _ = conn.execute("ALTER TABLE games ADD COLUMN steam_id INTEGER", []);
 
         Ok(Self {
             conn: Arc::new(Mutex::new(conn)),
@@ -57,7 +69,7 @@ impl SqliteStorage {
 impl StorageBackend for SqliteStorage {
     fn list_games(&self) -> Result<Vec<Game>> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT id, name, path, arguments, environment_vars, dll_overrides, wheel_profile, use_compat_layer, icon_path, cover_path FROM games")?;
+        let mut stmt = conn.prepare("SELECT id, name, path, arguments, environment_vars, dll_overrides, wheel_profile, use_compat_layer, icon_path, cover_path, is_steam, steam_id FROM games")?;
 
         let game_iter = stmt.query_map([], |row| {
             let env_str: String = row.get(4)?;
@@ -85,6 +97,8 @@ impl StorageBackend for SqliteStorage {
                 use_compat_layer: row.get::<_, i32>(7)? != 0,
                 icon_path: row.get(8)?,
                 cover_path: row.get(9)?,
+                is_steam: row.get::<_, i32>(10)? != 0,
+                steam_id: row.get(11)?,
             })
         })?;
 
@@ -107,8 +121,8 @@ impl StorageBackend for SqliteStorage {
         };
 
         conn.execute(
-            "INSERT OR REPLACE INTO games (id, name, path, arguments, environment_vars, dll_overrides, wheel_profile, use_compat_layer, icon_path, cover_path) 
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            "INSERT OR REPLACE INTO games (id, name, path, arguments, environment_vars, dll_overrides, wheel_profile, use_compat_layer, icon_path, cover_path, is_steam, steam_id) 
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
             params![
                 game.id,
                 game.name,
@@ -119,7 +133,9 @@ impl StorageBackend for SqliteStorage {
                 wheel_profile,
                 if game.use_compat_layer { 1 } else { 0 },
                 game.icon_path,
-                game.cover_path
+                game.cover_path,
+                if game.is_steam { 1 } else { 0 },
+                game.steam_id
             ],
         )?;
         Ok(())
@@ -130,6 +146,49 @@ impl StorageBackend for SqliteStorage {
         conn.execute("DELETE FROM games WHERE id = ?1", params![id])?;
         Ok(())
     }
+
+    fn get_game(&self, id: &str) -> Result<Option<Game>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT id, name, path, arguments, environment_vars, dll_overrides, wheel_profile, use_compat_layer, icon_path, cover_path, is_steam, steam_id FROM games WHERE id = ?1")?;
+
+        let mut game_iter = stmt.query_map(params![id], |row| {
+            let env_str: String = row.get(4)?;
+            let dll_str: String = row.get(5)?;
+            let env_vars: std::collections::HashMap<String, String> =
+                serde_json::from_str(&env_str).unwrap_or_default();
+            let dll_overrides: Vec<String> = serde_json::from_str(&dll_str).unwrap_or_default();
+            let args_str: String = row.get(3)?;
+            let arguments: Vec<String> = serde_json::from_str(&args_str).unwrap_or_default();
+            let wheel_profile_str: String = row.get(6)?;
+            let wheel_profile = if wheel_profile_str.is_empty() {
+                None
+            } else {
+                serde_json::from_str(&wheel_profile_str).ok()
+            };
+
+            Ok(Game {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                path: PathBuf::from(row.get::<_, String>(2)?),
+                arguments,
+                environment_vars: env_vars,
+                dll_overrides,
+                wheel_profile,
+                use_compat_layer: row.get::<_, i32>(7)? != 0,
+                icon_path: row.get(8)?,
+                cover_path: row.get(9)?,
+                is_steam: row.get::<_, i32>(10)? != 0,
+                steam_id: row.get(11)?,
+            })
+        })?;
+
+        if let Some(game) = game_iter.next() {
+            Ok(Some(game?))
+        } else {
+            Ok(None)
+        }
+    }
+
 
     fn list_profiles(&self) -> Result<Vec<WheelProfile>> {
         let conn = self.conn.lock().unwrap();
@@ -193,6 +252,28 @@ impl StorageBackend for SqliteStorage {
 
         if let Some(profile) = profile_iter.next() {
             Ok(Some(profile?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn save_setting(&self, key: &str, value: &str) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT OR REPLACE INTO settings (key, value) VALUES (?1, ?2)",
+            params![key, value],
+        )?;
+        Ok(())
+    }
+
+    fn get_setting(&self, key: &str) -> Result<Option<String>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT value FROM settings WHERE key = ?1")?;
+        
+        let mut iter = stmt.query_map(params![key], |row| row.get(0))?;
+        
+        if let Some(result) = iter.next() {
+            Ok(Some(result?))
         } else {
             Ok(None)
         }

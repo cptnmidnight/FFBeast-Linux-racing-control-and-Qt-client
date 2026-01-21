@@ -5,4 +5,6 @@ use crate::models::{Game, WheelProfile};
 pub struct TomlData {
     pub games: Vec<Game>,
     pub profiles: Vec<WheelProfile>,
+    #[serde(default)]
+    pub settings: std::collections::HashMap<String, String>,
 }

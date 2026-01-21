@@ -17,7 +17,13 @@
             "args": "Argumentos de Lançamento (opcional)",
             "browse": "Procurar",
             "cancel": "Cancelar",
-            "save": "Salvar Jogo"
+            "save": "Salvar Jogo",
+            "search": "Buscar Jogos da Steam",
+            "selectFromLibrary": "Selecionar da Biblioteca Steam",
+            "steamLibraryTitle": "Seus Jogos da Steam",
+            "loading": "Carregando...",
+            "searching": "Buscando...",
+            "close": "Fechar"
         }
     },
     "monitor": {
@@ -32,5 +38,66 @@
         "total_force": "Força Total",
         "motion_range": "Graus de Rotação",
         "dynamic_damp": "Amortecimento Dinâmico"
+    },
+    "settings": {
+        "title": "Configurações",
+        "wheel": {
+            "title": "Perfil Padrão do Volante",
+            "motion_range": "Graus de Rotação",
+            "help_motion_range": "Define o ângulo máximo de rotação (180° a 1440°)",
+            "total_force": "Força Total",
+            "help_total_force": "Intensidade geral do Force Feedback (0-100%)",
+            "integrated_spring": "Força da Mola Integrada",
+            "help_integrated_spring": "Força de retorno ao centro quando não há efeitos ativos",
+            "invert_force": "Inverter Força do Jogo",
+            "help_invert_force": "Inverte a direção da força recebida do jogo"
+        },
+        "soft_stop": {
+            "title": "Soft Stop (Limite Suave)",
+            "strength": "Força do Soft Stop",
+            "help_strength": "Intensidade da resistência nos limites de rotação",
+            "range": "Alcance do Soft Stop",
+            "help_range": "Graus antes do limite onde o soft stop começa a agir",
+            "dampening": "Amortecimento do Soft Stop",
+            "help_dampening": "Amortecimento aplicado durante o soft stop"
+        },
+        "dampening": {
+            "title": "Amortecimento",
+            "static": "Amortecimento Estático",
+            "help_static": "Resistência ao movimento quando o volante está parado",
+            "dynamic": "Amortecimento Dinâmico",
+            "help_dynamic": "Resistência proporcional à velocidade de rotação"
+        },
+        "directx": {
+            "title": "Efeitos DirectX (do Jogo)",
+            "constant": "Força Constante",
+            "help_constant": "Intensidade dos efeitos de força constante do jogo",
+            "periodic": "Efeitos Periódicos",
+            "help_periodic": "Intensidade dos efeitos periódicos (vibrações, ondas)",
+            "spring": "Efeitos de Mola",
+            "help_spring": "Intensidade dos efeitos de mola do jogo"
+        },
+        "gamepad": {
+            "title": "Mapeamento de Gamepad",
+            "axis_x": "Eixo X",
+            "axis_y": "Eixo Y",
+            "axis_z": "Eixo Z",
+            "axis_rz": "Eixo RZ",
+            "enabled": "Habilitado",
+            "inverted": "Invertido",
+            "deadzone": "Dead Zone",
+            "help_deadzone": "Zona morta central dos eixos analógicos",
+            "save": "Salvar Mapeamento"
+        },
+        "ui": {
+            "title": "Personalização da Interface",
+            "primary_color": "Cor Principal",
+            "font_size": "Tamanho da Fonte",
+            "help_font_size": "Tamanho base da fonte da interface"
+        },
+        "actions": {
+            "save_wheel": "Salvar Configurações",
+            "apply_wheel": "Aplicar ao Volante Agora"
+        }
     }
 }

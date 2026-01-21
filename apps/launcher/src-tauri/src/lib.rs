@@ -4,7 +4,7 @@ pub mod services;
 
 use crate::models::WheelProfile;
 
-use crate::storage::{StorageBackend, TomlStorage};
+use crate::storage::{StorageBackend, SqliteStorage};
 use ffbeast_controller::{EffectSettings, HardwareService, HardwareSettings, WheelInterface};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -12,9 +12,11 @@ use tauri::State;
 use tauri::Emitter as _;
 use tracing::{info, instrument};
 use tracing_subscriber::fmt::format::FmtSpan;
+use crate::services::keyboard_service::KeyboardService;
+
 
 #[tauri::command]
-#[instrument(skip(hardware))]
+#[instrument(skip(hardware), level = "debug")]
 fn check_hardware(hardware: State<'_, Arc<HardwareService>>) -> bool {
     hardware.is_connected()
 }
@@ -86,28 +88,34 @@ fn get_hardware_settings(hardware: State<'_, Arc<HardwareService>>) -> Result<Ha
 }
 
 #[tauri::command]
-#[instrument(skip(storage))]
-fn get_games(storage: State<'_, Arc<TomlStorage>>) -> Vec<crate::models::Game> {
+#[instrument(skip(storage), level = "debug")]
+fn get_games(storage: State<'_, Arc<SqliteStorage>>) -> Vec<crate::models::Game> {
     storage.list_games().unwrap_or_default()
 }
 
 #[tauri::command]
-#[instrument]
-async fn scan_games() -> Vec<crate::models::Game> {
-    crate::services::game_scanner::GameScanner::scan()
+#[instrument(skip(storage), err)]
+fn save_game(storage: State<'_, Arc<SqliteStorage>>, game: crate::models::Game) -> Result<(), String> {
+    storage.save_game(game).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 #[instrument(skip(storage), err)]
-fn save_game(storage: State<'_, Arc<TomlStorage>>, game: crate::models::Game) -> Result<(), String> {
-    storage.save_game(game).map_err(|e| e.to_string())
+fn get_game(storage: State<'_, Arc<SqliteStorage>>, id: String) -> Result<Option<crate::models::Game>, String> {
+    storage.get_game(&id).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+#[instrument(skip(storage), err)]
+fn delete_game(storage: State<'_, Arc<SqliteStorage>>, id: String) -> Result<(), String> {
+    storage.delete_game(&id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
 #[instrument(skip(storage, hardware), fields(game_id = %id), err)]
 async fn launch_game(
     id: String,
-    storage: State<'_, Arc<TomlStorage>>,
+    storage: State<'_, Arc<SqliteStorage>>,
     hardware: State<'_, Arc<HardwareService>>,
 ) -> Result<(), String> {
     let games = storage.list_games().map_err(|e| e.to_string())?;
@@ -153,6 +161,109 @@ async fn launch_game(
 
 #[tauri::command]
 #[instrument]
+async fn scan_steam_library() -> Result<Vec<crate::services::steam_library::SteamGame>, String> {
+    crate::services::steam_library::scan_steam_games().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+#[instrument]
+async fn search_games(query: String) -> Result<Vec<(u32, String)>, String> {
+    crate::services::game_metadata::search_steam_games(&query)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+#[instrument]
+async fn fetch_game_metadata(app_id: u32) -> Result<crate::services::game_metadata::GameMetadata, String> {
+    crate::services::game_metadata::fetch_steam_metadata(app_id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+// ===== Settings Commands =====
+
+#[tauri::command]
+#[instrument(skip(storage))]
+fn get_default_wheel_settings(storage: State<'_, Arc<SqliteStorage>>) -> Result<crate::models::DefaultWheelSettings, String> {
+    if let Ok(Some(json)) = storage.get_setting("default_wheel_settings") {
+        if let Ok(settings) = serde_json::from_str(&json) {
+            return Ok(settings);
+        }
+    }
+    Ok(crate::models::DefaultWheelSettings::default())
+}
+
+#[tauri::command]
+#[instrument(skip(storage), err)]
+fn save_default_wheel_settings(storage: State<'_, Arc<SqliteStorage>>, settings: crate::models::DefaultWheelSettings) -> Result<(), String> {
+    let json = serde_json::to_string(&settings).map_err(|e| e.to_string())?;
+    storage.save_setting("default_wheel_settings", &json).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+#[instrument(skip(storage))]
+fn get_gamepad_mapping(storage: State<'_, Arc<SqliteStorage>>) -> Result<crate::models::GamepadAxisMapping, String> {
+    if let Ok(Some(json)) = storage.get_setting("gamepad_mapping") {
+        if let Ok(mapping) = serde_json::from_str(&json) {
+            return Ok(mapping);
+        }
+    }
+    Ok(crate::models::GamepadAxisMapping::default())
+}
+
+#[tauri::command]
+#[instrument(skip(storage), err)]
+fn save_gamepad_mapping(storage: State<'_, Arc<SqliteStorage>>, mapping: crate::models::GamepadAxisMapping) -> Result<(), String> {
+    let json = serde_json::to_string(&mapping).map_err(|e| e.to_string())?;
+    storage.save_setting("gamepad_mapping", &json).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+#[instrument(skip(_hardware), err)]
+fn apply_wheel_settings_to_hardware(
+    settings: crate::models::DefaultWheelSettings,
+    _hardware: State<'_, Arc<HardwareService>>
+) -> Result<(), String> {
+    info!("Apply settings request received: {:?}", settings);
+
+    // Read current effect settings
+    let mut current_effects = _hardware.read_effect_settings().map_err(|e| e.to_string())?;
+    
+    // Update effect fields
+    current_effects.motion_range = settings.motion_range;
+    current_effects.total_effect_strength = settings.total_force;
+    current_effects.integrated_spring_strength = settings.integrated_spring_strength;
+    current_effects.static_dampening_strength = settings.static_dampening_strength;
+    current_effects.dynamic_dampening_strength = settings.dynamic_dampening_strength;
+    current_effects.soft_stop_strength = settings.soft_stop_strength;
+    current_effects.soft_stop_range = settings.soft_stop_range;
+    current_effects.soft_stop_dampening_strength = settings.soft_stop_dampening;
+    
+    // DirectX
+    current_effects.direct_x_constant_strength = settings.direct_x_constant;
+    current_effects.direct_x_periodic_strength = settings.direct_x_periodic;
+    current_effects.direct_x_spring_strength = settings.direct_x_spring;
+
+    // Send updated effects
+    _hardware.send_effect_settings(current_effects).map_err(|e| e.to_string())?;
+
+    // Read and update hardware settings
+    let mut current_hw = _hardware.read_hardware_settings().map_err(|e| e.to_string())?;
+    current_hw.power_limit = settings.power_limit;
+    current_hw.braking_limit = settings.braking_limit;
+    current_hw.force_direction = if settings.invert_game_force { 1 } else { 0 };
+
+    _hardware.send_hardware_settings(current_hw).map_err(|e| e.to_string())?;
+
+    // Persist to flash
+    _hardware.save_settings().map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+#[instrument]
 fn greet(name: &str) -> String {
     format!("Hello, {}! Welcome to SODevs Game Launcher!", name)
 }
@@ -173,12 +284,17 @@ pub fn run() {
     let hardware = Arc::new(HardwareService::new());
     let hardware_clone = hardware.clone();
     
-    let storage = Arc::new(TomlStorage::new(PathBuf::from("launcher_settings.toml")).unwrap());
+    let storage = Arc::new(SqliteStorage::new(PathBuf::from("launcher_games.db")).unwrap());
+    let keyboard_service = Arc::new(KeyboardService::new());
+    let keyboard_service_clone = keyboard_service.clone();
+
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(hardware)
         .manage(storage)
+        .manage(keyboard_service) // Now passing Arc<KeyboardService>
         .setup(move |app| {
             let handle = app.handle().clone();
             
@@ -189,7 +305,9 @@ pub fn run() {
                     }
 
                     if let Ok(status) = hardware_clone.read_status() {
-                        let _ = handle.emit("wheel-status", status);
+                        let _ = handle.emit("wheel-status", status.clone());
+                        // Process keyboard mapping logic separately
+                        keyboard_service_clone.process(&status);
                     }
                     
                     std::thread::sleep(std::time::Duration::from_millis(16));
@@ -201,8 +319,9 @@ pub fn run() {
             greet, 
             check_hardware, 
             get_games,
-            scan_games,
             save_game,
+            get_game,
+            delete_game,
             reset_center,
             reboot_device,
             update_effect_settings,
@@ -211,7 +330,22 @@ pub fn run() {
             get_hardware_settings,
             save_settings_to_hardware,
             open_advanced_config,
-            launch_game
+            launch_game,
+            scan_steam_library,
+            search_games,
+            fetch_game_metadata,
+            get_default_wheel_settings,
+            save_default_wheel_settings,
+            get_gamepad_mapping,
+            save_gamepad_mapping,
+            apply_wheel_settings_to_hardware,
+            // Keyboard Service
+            crate::services::keyboard_service::keyboard_service_start,
+            crate::services::keyboard_service::keyboard_service_stop,
+            crate::services::keyboard_service::keyboard_service_restart,
+            crate::services::keyboard_service::keyboard_service_is_active,
+            crate::services::keyboard_service::set_keyboard_mapping,
+            crate::services::keyboard_service::get_keyboard_mapping,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

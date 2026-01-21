@@ -8,6 +8,8 @@
                     "check_hardware",
                     "get_games",
                     "save_game",
+                    "get_game",
+                    "delete_game",
                     "reset_center",
                     "reboot_device",
                     "update_effect_settings",
@@ -17,6 +19,14 @@
                     "save_settings_to_hardware",
                     "open_advanced_config",
                     "launch_game",
+                    "scan_steam_library",
+                    "search_games",
+                    "fetch_game_metadata",
+                    "get_default_wheel_settings",
+                    "save_default_wheel_settings",
+                    "get_gamepad_mapping",
+                    "save_gamepad_mapping",
+                    "apply_wheel_settings_to_hardware",
                     "greet"
                 ]
             }

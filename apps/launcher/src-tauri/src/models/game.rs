@@ -20,4 +20,6 @@ pub struct Game {
     pub use_compat_layer: bool,
     pub icon_path: Option<String>,
     pub cover_path: Option<String>,
+    pub is_steam: bool,
+    pub steam_id: Option<u32>,
 }

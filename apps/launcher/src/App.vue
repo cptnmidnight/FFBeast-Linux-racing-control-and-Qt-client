@@ -4,6 +4,7 @@ import GameList from './components/GameList/GameList.vue';
 import HardwareMonitor from './components/HardwareMonitor/HardwareMonitor.vue';
 import WheelConfigModal from './components/WheelConfig/WheelConfigModal.vue';
 import AddGameModal from './components/AddGameModal/AddGameModal.vue';
+import Settings from './views/Settings.vue';
 
 export default defineComponent({
   name: 'App',
@@ -11,12 +12,15 @@ export default defineComponent({
     GameList,
     HardwareMonitor,
     WheelConfigModal,
-    AddGameModal
+    AddGameModal,
+    Settings
   },
   setup() {
     const showAddModal = ref(false);
     const showConfigModal = ref(false);
     const gameListRef = ref<InstanceType<typeof GameList> | null>(null);
+    const editingGameId = ref<string | undefined>(undefined);
+    const currentView = ref<'library' | 'settings'>('library');
 
     const onGameSaved = () => {
         // Refresh list
@@ -25,11 +29,25 @@ export default defineComponent({
         }
     };
 
+    const handleEditGame = (gameId: string) => {
+        editingGameId.value = gameId;
+        showAddModal.value = true;
+    };
+
+    const handleCloseModal = () => {
+        showAddModal.value = false;
+        editingGameId.value = undefined;
+    };
+
     return {
         showAddModal,
         showConfigModal,
         gameListRef,
-        onGameSaved
+        editingGameId,
+        currentView,
+        onGameSaved,
+        handleEditGame,
+        handleCloseModal
     };
   }
 });
@@ -39,10 +57,23 @@ export default defineComponent({
   <div class="container">
     <header>
       <h1>{{ $t('app.title') }}</h1>
-      <!-- Language selector implementation later -->
+      <nav class="main-nav">
+        <button 
+          :class="{ active: currentView === 'library' }"
+          @click="currentView = 'library'"
+        >
+          📚 Biblioteca
+        </button>
+        <button 
+          :class="{ active: currentView === 'settings' }"
+          @click="currentView = 'settings'"
+        >
+          ⚙️ Configurações
+        </button>
+      </nav>
     </header>
     
-    <main>
+    <main v-if="currentView === 'library'">
        <!-- Top Section: Hardware Info and Config -->
        <HardwareMonitor @open-config="showConfigModal = true" />
 
@@ -52,13 +83,18 @@ export default defineComponent({
             <h2>{{ $t('library.title') }}</h2>
             <button class="btn-add" @click="showAddModal = true">+ {{ $t('library.add_game') }}</button>
           </div>
-          <GameList ref="gameListRef" />
+          <GameList ref="gameListRef" @edit-game="handleEditGame" />
        </section>
+    </main>
+
+    <main v-else-if="currentView === 'settings'">
+      <Settings />
     </main>
     
     <AddGameModal 
         v-if="showAddModal" 
-        @close="showAddModal = false"
+        :gameId="editingGameId"
+        @close="handleCloseModal"
         @saved="onGameSaved"
     />
     
@@ -94,6 +130,39 @@ h1 {
   background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: 800;
+}
+
+header {
+    margin-bottom: 3rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.main-nav {
+    display: flex;
+    gap: 1rem;
+}
+
+.main-nav button {
+    padding: 0.6rem 1.2rem;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-color);
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.main-nav button.active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: white;
+}
+
+.main-nav button:hover:not(.active) {
+    border-color: var(--primary-color);
 }
 
 .section-header {

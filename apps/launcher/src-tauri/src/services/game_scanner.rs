@@ -1,6 +1,6 @@
 use crate::models::Game;
 use serde::Deserialize;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use tracing::{info, error};
 
 #[derive(Debug, Deserialize)]
@@ -66,6 +66,8 @@ impl GameScanner {
                             use_compat_layer: use_compat,
                             icon_path: None,
                             cover_path: None,
+                            is_steam: false,
+                            steam_id: None,
                         });
                         
                         break; 

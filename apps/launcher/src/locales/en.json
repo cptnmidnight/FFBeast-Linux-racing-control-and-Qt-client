@@ -32,5 +32,66 @@
         "total_force": "Total Force",
         "motion_range": "Motion Range",
         "dynamic_damp": "Dynamic Dampening"
+    },
+    "settings": {
+        "title": "Settings",
+        "wheel": {
+            "title": "General Wheel Settings",
+            "motion_range": "Rotation Degrees",
+            "help_motion_range": "Sets the maximum rotation angle (180° to 1440°)",
+            "total_force": "Total Force",
+            "help_total_force": "Overall Force Feedback intensity (0-100%)",
+            "integrated_spring": "Integrated Spring Force",
+            "help_integrated_spring": "Centering force when no game effects are active",
+            "invert_force": "Invert Game Force",
+            "help_invert_force": "Inverts the direction of force received from the game"
+        },
+        "soft_stop": {
+            "title": "Soft Stop",
+            "strength": "Soft Stop Strength",
+            "help_strength": "Resistance intensity at rotation limits",
+            "range": "Soft Stop Range",
+            "help_range": "Degrees before the limit where soft stop begins",
+            "dampening": "Soft Stop Dampening",
+            "help_dampening": "Dampening applied during soft stop"
+        },
+        "dampening": {
+            "title": "Dampening",
+            "static": "Static Dampening",
+            "help_static": "Resistance to movement when wheel is stopped",
+            "dynamic": "Dynamic Dampening",
+            "help_dynamic": "Resistance proportional to rotation speed"
+        },
+        "directx": {
+            "title": "DirectX Effects (Game)",
+            "constant": "Constant Force",
+            "help_constant": "Intensity of constant force effects",
+            "periodic": "Periodic Effects",
+            "help_periodic": "Intensity of periodic effects (vibrations, waves)",
+            "spring": "Spring Effects",
+            "help_spring": "Intensity of spring effects"
+        },
+        "gamepad": {
+            "title": "Gamepad Mapping",
+            "axis_x": "Axis X",
+            "axis_y": "Axis Y",
+            "axis_z": "Axis Z",
+            "axis_rz": "Axis RZ",
+            "enabled": "Enabled",
+            "inverted": "Inverted",
+            "deadzone": "Dead Zone",
+            "help_deadzone": "Center deadzone for analog axes",
+            "save": "Save Mapping"
+        },
+        "ui": {
+            "title": "Interface Customization",
+            "primary_color": "Primary Color",
+            "font_size": "Font Size",
+            "help_font_size": "Base font size for the interface"
+        },
+        "actions": {
+            "save_wheel": "Save Settings",
+            "apply_wheel": "Apply to Wheel Now"
+        }
     }
 }

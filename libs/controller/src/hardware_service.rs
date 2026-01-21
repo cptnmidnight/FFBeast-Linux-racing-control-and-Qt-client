@@ -152,13 +152,13 @@ impl HardwareService {
 }
 
 impl WheelInterface for HardwareService {
-    #[instrument(skip(self))]
+    #[instrument(skip(self), level = "debug")]
     fn is_connected(&self) -> bool {
         let dev = self.device.lock().unwrap();
         dev.is_some()
     }
 
-    #[instrument(skip(self), err)]
+    #[instrument(skip(self), err, level = "debug")]
     fn connect(&self) -> Result<()> {
         // Avoid re-connecting if already active
         {
@@ -168,11 +168,15 @@ impl WheelInterface for HardwareService {
             }
         }
 
-        tracing::info!(
-            "Searching for FFBeast Controller (VID: {}, PID: {})...",
-            USB_VID,
-            WHEEL_PID
-        );
+        static PROCESS_COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+        let count = PROCESS_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        if count % 120 == 0 {
+            tracing::info!(
+                "Searching for FFBeast Controller (VID: {}, PID: {})...",
+                USB_VID,
+                WHEEL_PID
+            );
+        }
         let api = HidApi::new().map_err(|e| anyhow!("Failed to init HID: {}", e))?;
 
         let devices = api.device_list();

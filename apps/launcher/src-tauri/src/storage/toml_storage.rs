@@ -62,6 +62,12 @@ impl StorageBackend for TomlStorage {
     }
 
     #[instrument(skip(self), err)]
+    fn get_game(&self, id: &str) -> Result<Option<Game>> {
+        let cache = self.cache.read().unwrap();
+        Ok(cache.games.iter().find(|g| g.id == id).cloned())
+    }
+
+    #[instrument(skip(self), err)]
     fn list_profiles(&self) -> Result<Vec<WheelProfile>> {
         let cache = self.cache.read().unwrap();
         Ok(cache.profiles.clone())
@@ -82,6 +88,19 @@ impl StorageBackend for TomlStorage {
     fn get_profile(&self, id: &str) -> Result<Option<WheelProfile>> {
         let cache = self.cache.read().unwrap();
         Ok(cache.profiles.iter().find(|p| p.id == id).cloned())
+    }
+
+    #[instrument(skip(self), err)]
+    fn save_setting(&self, key: &str, value: &str) -> Result<()> {
+        let mut cache = self.cache.write().unwrap();
+        cache.settings.insert(key.to_string(), value.to_string());
+        self.save_to_disk(&cache)
+    }
+
+    #[instrument(skip(self), err)]
+    fn get_setting(&self, key: &str) -> Result<Option<String>> {
+        let cache = self.cache.read().unwrap();
+        Ok(cache.settings.get(key).cloned())
     }
 }
 
