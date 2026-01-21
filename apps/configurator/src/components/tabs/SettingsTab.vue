@@ -2,31 +2,31 @@
   <div class="settings-tab">
     <div class="grid-layout">
       <!-- UI Settings -->
-      <BaseCard :title="$t('settings_ui')">
+      <BaseCard :title="$t('settings.ui')">
         <BaseSelect 
           v-model="language" 
           :options="langOptions" 
-          :label="$t('setting_language')"
+          :label="$t('settings.language')"
           @update:model-value="changeLang"
         />
         
         <BaseSelect 
           v-model="uiStore.settings.fontFamily" 
           :options="fontOptions" 
-          :label="$t('setting_ui_font')"
+          :label="$t('settings.ui_font')"
           @update:model-value="applyFont"
         />
         
         <BaseSlider 
           v-model="uiStore.settings.fontSize" 
-          :label="$t('settings_font_size')" 
+          :label="$t('settings.font_size')" 
           :min="12" 
           :max="24" 
           @update:model-value="applyFontSize"
         />
         
         <div class="theme-selector">
-          <label>{{ $t('settings_accent_color') }}</label>
+          <label>{{ $t('settings.accent_color') }}</label>
           <div class="color-grid">
             <div 
               v-for="color in accentColors" 
@@ -40,30 +40,30 @@
       </BaseCard>
 
       <!-- Toast Settings -->
-      <BaseCard :title="$t('setting_toast_notifications')">
+      <BaseCard :title="$t('settings.toasts.notifications')">
         <BaseSelect 
           v-model="uiStore.settings.toastPosition" 
           :options="toastPositionOptions" 
-          :label="$t('setting_toast_position')"
+          :label="$t('settings.toasts.position')"
           :use-i18n="true"
         />
         
         <BaseSlider 
           v-model="uiStore.settings.toastMargin" 
-          :label="$t('setting_toast_margin')" 
+          :label="$t('settings.toasts.margin')" 
           :min="10" 
           :max="100" 
         />
         
-        <button class="btn-test" @click="testToast">{{ $t('btn_test_toast') }}</button>
+        <button class="btn-test" @click="testToast">{{ $t('buttons.test_toast') }}</button>
       </BaseCard>
 
       <!-- Advanced Settings -->
-      <BaseCard :title="$t('settings_advanced') || 'Advanced Settings'">
+      <BaseCard :title="$t('settings.advanced') || 'Advanced Settings'">
         <div class="control-group">
           <div class="label-col">
-            <span class="label">{{ $t('setting_min_log_level') }}</span>
-            <span class="desc">{{ $t('setting_min_log_level_desc') }}</span>
+            <span class="label">{{ $t('settings.min_log_level') }}</span>
+            <span class="desc">{{ $t('settings.min_log_level_desc') }}</span>
           </div>
           <BaseSelect 
             v-model="uiStore.settings.minLogLevel" 
@@ -76,8 +76,8 @@
         
         <div class="control-group">
           <div class="label-col">
-            <span class="label">{{ $t('setting_debug_mode') }}</span>
-            <span class="desc">{{ $t('setting_debug_desc') }}</span>
+            <span class="label">{{ $t('settings.debug_mode') }}</span>
+            <span class="desc">{{ $t('settings.debug_desc') }}</span>
           </div>
           <BaseSwitch 
             v-model="uiStore.settings.debugMode" 
@@ -87,10 +87,10 @@
       </BaseCard>
 
       <!-- App Info -->
-      <BaseCard :title="$t('app_info')">
+      <BaseCard :title="$t('app.info')">
         <div class="info-grid">
           <div class="info-row">
-            <span class="info-label">{{ $t('settings_version') }}</span>
+            <span class="info-label">{{ $t('settings.version') }}</span>
             <span class="info-value">v{{ versions.app }}</span>
           </div>
           <div class="info-row">
@@ -98,18 +98,18 @@
             <span class="info-value">v{{ versions.controller }}</span>
           </div>
           <div class="info-row">
-            <span class="info-label">{{ $t('setting_build_date') }}</span>
+            <span class="info-label">{{ $t('settings.build_date') }}</span>
             <span class="info-value">2026-01-20</span>
           </div>
           <div class="info-row">
-            <span class="info-label">{{ $t('setting_platform') }}</span>
+            <span class="info-label">{{ $t('settings.platform') }}</span>
             <span class="info-value">Linux (Tauri)</span>
           </div>
         </div>
         <template #footer>
           <div class="footer-links">
-            <a href="#">{{ $t('link_github') }}</a>
-            <a href="#">{{ $t('link_docs') }}</a>
+            <a href="#">{{ $t('app.links.github') }}</a>
+            <a href="#">{{ $t('app.links.docs') }}</a>
           </div>
         </template>
       </BaseCard>
@@ -155,18 +155,18 @@ const fontOptions = [
 ];
 
 const toastPositionOptions = [
-  { label: 'toast_pos_top_right', value: 'top-right' },
-  { label: 'toast_pos_bottom_right', value: 'bottom-right' },
-  { label: 'toast_pos_top_left', value: 'top-left' },
-  { label: 'toast_pos_bottom_left', value: 'bottom-left' },
+  { label: 'toasts.positions.top_right', value: 'top-right' },
+  { label: 'toasts.positions.bottom_right', value: 'bottom-right' },
+  { label: 'toasts.positions.top_left', value: 'top-left' },
+  { label: 'toasts.positions.bottom_left', value: 'bottom-left' },
 ];
 
 const logLevelOptions = [
-  { label: 'log_level_error', value: 1 },
-  { label: 'log_level_warn', value: 2 },
-  { label: 'log_level_info', value: 3 },
-  { label: 'log_level_debug', value: 4 },
-  { label: 'log_level_trace', value: 5 },
+  { label: 'logs.level.error', value: 1 },
+  { label: 'logs.level.warn', value: 2 },
+  { label: 'logs.level.info', value: 3 },
+  { label: 'logs.level.debug', value: 4 },
+  { label: 'logs.level.trace', value: 5 },
 ];
 
 // Avoid semantic colors (success, error, warning)

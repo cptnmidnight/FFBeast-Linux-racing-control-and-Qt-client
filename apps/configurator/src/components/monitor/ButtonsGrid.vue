@@ -1,7 +1,7 @@
 <template>
   <section class="buttons-card">
     <div class="card-header">
-      <h3>{{ $t('buttons_title') }}</h3>
+      <h3>{{ $t('labels.digital_buttons') }}</h3>
     </div>
     <div class="buttons-grid">
       <div 

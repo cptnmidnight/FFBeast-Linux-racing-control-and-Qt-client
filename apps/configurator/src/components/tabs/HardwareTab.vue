@@ -2,31 +2,31 @@
   <div class="hardware-tab">
     <div class="grid-layout">
       <!-- Motor Limits -->
-      <BaseCard :title="$t('group_motor')">
+      <BaseCard :title="$t('groups.motor')">
         <BaseSwitch 
           v-model="ffbEnabled" 
-          :label="$t('ffb_active_label')" 
-          :help="$t('help_force_enabled')"
+          :label="$t('labels.ffb_active')" 
+          :help="$t('help.force_enabled')"
           @update:model-value="toggleFFB"
         />
         <BaseSlider 
           v-model="hardware.power_limit" 
-          :label="$t('setting_power_limit')" 
-          :help="$t('help_power_limit')"
+          :label="$t('settings.power_limit')" 
+          :help="$t('help.power_limit')"
           suffix="%"
           @update:model-value="saveHardware"
         />
         <BaseSlider 
           v-model="hardware.braking_limit" 
-          :label="$t('setting_braking_limit')" 
-          :help="$t('help_braking_limit')"
+          :label="$t('settings.braking_limit')" 
+          :help="$t('help.braking_limit')"
           suffix="%"
           @update:model-value="saveHardware"
         />
         <BaseSlider 
           v-model="hardware.amplifier_gain" 
-          :label="$t('setting_amplifier_gain')" 
-          :help="$t('help_amplifier_gain')"
+          :label="$t('settings.amplifier_gain')" 
+          :help="$t('help.amplifier_gain')"
           suffix="%"
           :max="500" 
           @update:model-value="saveHardware"
@@ -34,24 +34,27 @@
       </BaseCard>
 
       <!-- Advanced Motor Config -->
-      <BaseCard :title="$t('settings_advanced')">
+      <BaseCard :title="$t('settings.advanced')">
         <BaseSlider 
           v-model="hardware.encoder_cpr" 
-          :label="$t('setting_encoder_cpr')" 
+          :label="$t('settings.encoder_cpr')" 
+          :help="$t('help.encoder_cpr')"
           :min="1" 
           :max="65535" 
           @update:model-value="saveHardware"
         />
         <BaseSlider 
           v-model="hardware.speed_buffer_size" 
-          :label="$t('setting_speed_buffer')" 
+          :label="$t('settings.speed_buffer')" 
+          :help="$t('help.speed_buffer')"
           :min="1" 
           :max="255" 
           @update:model-value="saveHardware"
         />
         <BaseSlider 
           v-model="hardware.position_smoothing" 
-          :label="$t('setting_pos_smoothing')" 
+          :label="$t('settings.pos_smoothing')" 
+          :help="$t('help.position_smoothing')"
           suffix="%"
           :max="255"
           @update:model-value="saveHardware"
@@ -59,11 +62,11 @@
       </BaseCard>
 
       <!-- Mechanical Config -->
-      <BaseCard :title="$t('setting_mech_config')">
+      <BaseCard :title="$t('settings.mech_config')">
         <BaseSlider 
           v-model="hardware.pole_pairs" 
-          :label="$t('setting_pole_pairs')" 
-          :help="$t('help_pole_pairs')"
+          :label="$t('settings.pole_pairs')" 
+          :help="$t('help.pole_pairs')"
           :min="1" 
           :max="50" 
           @update:model-value="saveHardware"
@@ -71,57 +74,57 @@
         <div class="switch-group">
           <BaseSwitch 
             v-model="encoderDir" 
-            :label="$t('setting_encoder_dir')" 
-            :help="$t('help_encoder_direction')"
+            :label="$t('settings.encoder_dir')" 
+            :help="$t('help.encoder_direction')"
             @update:model-value="handleSwitches"
           />
           <BaseSwitch 
             v-model="forceDir" 
-            :label="$t('setting_force_dir')" 
-            :help="$t('help_force_direction')"
+            :label="$t('settings.force_dir')" 
+            :help="$t('help.force_direction')"
             @update:model-value="handleSwitches"
           />
           <BaseSwitch 
             v-model="debugTorque" 
-            :label="$t('setting_debug_torque')" 
-            :help="$t('help_debug_torque')"
+            :label="$t('settings.debug_torque')" 
+            :help="$t('help.debug_torque')"
             @update:model-value="handleSwitches"
           />
         </div>
       </BaseCard>
 
       <!-- Calibration -->
-      <BaseCard :title="$t('setting_calibration')">
+      <BaseCard :title="$t('settings.calibration')">
         <BaseSlider 
           v-model="hardware.calibration_speed" 
-          :label="$t('setting_calibration_speed')" 
-          :help="$t('help_calibration_speed')"
+          :label="$t('settings.calibration_speed')" 
+          :help="$t('help.calibration_speed')"
           suffix="%"
           @update:model-value="saveHardware"
         />
         <BaseSlider 
           v-model="hardware.calibration_magnitude" 
-          :label="$t('setting_calibration_magnitude')" 
-          :help="$t('help_calibration_magnitude')"
+          :label="$t('settings.calibration_magnitude')" 
+          :help="$t('help.calibration_magnitude')"
           suffix="%"
           @update:model-value="saveHardware"
         />
       </BaseCard>
 
       <!-- PID Controller -->
-      <BaseCard :title="$t('group_pid')">
-        <p class="description">{{ $t('group_pid_desc') }}</p>
+      <BaseCard :title="$t('groups.pid')">
+        <p class="description">{{ $t('groups.pid_desc') }}</p>
         <BaseSlider 
           v-model="hardware.proportional_gain" 
-          :label="$t('setting_p_gain')" 
-          :help="$t('help_proportional_gain')"
+          :label="$t('settings.p_gain')" 
+          :help="$t('help.proportional_gain')"
           :max="2000" 
           @update:model-value="saveHardware"
         />
         <BaseSlider 
           v-model="hardware.integral_gain" 
-          :label="$t('setting_i_gain')" 
-          :help="$t('help_integral_gain')"
+          :label="$t('settings.i_gain')" 
+          :help="$t('help.integral_gain')"
           :max="1000" 
           @update:model-value="saveHardware"
         />

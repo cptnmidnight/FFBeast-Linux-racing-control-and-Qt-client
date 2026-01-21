@@ -2,11 +2,11 @@
   <div class="effects-tab">
     <div class="grid-layout">
       <!-- Basics -->
-      <BaseCard :title="$t('group_general')">
+      <BaseCard :title="$t('groups.general')">
         <BaseSlider 
           v-model="effects.motion_range" 
-          :label="$t('setting_motion_range')" 
-          :help="$t('help_motion_range')"
+          :label="$t('settings.motion_range')" 
+          :help="$t('help.motion_range')"
           :min="180" 
           :max="1440" 
           :step="10" 
@@ -15,31 +15,34 @@
         />
         <BaseSlider 
           v-model="effects.total_effect_strength" 
-          :label="$t('setting_total_strength')" 
-          :help="$t('help_total_effect_strength')"
+          :label="$t('settings.total_strength')" 
+          :help="$t('help.total_effect_strength')"
           suffix="%"
           @update:model-value="saveEffects"
         />
       </BaseCard>
 
       <!-- Soft Stop -->
-      <BaseCard :title="'Soft Stop'">
+      <BaseCard :title="$t('groups.soft_stop')">
         <BaseSlider 
           v-model="effects.soft_stop_strength" 
-          :label="$t('setting_soft_stop_strength')" 
+          :label="$t('settings.soft_stop_strength')" 
+          :help="$t('help.soft_stop_strength')"
           suffix="%"
           @update:model-value="saveEffects"
         />
         <BaseSlider 
           v-model="effects.soft_stop_range" 
-          :label="$t('setting_soft_stop_range')" 
+          :label="$t('settings.soft_stop_range')" 
+          :help="$t('help.soft_stop_range')"
           suffix="°"
           :max="255"
           @update:model-value="saveEffects"
         />
         <BaseSlider 
           v-model="effects.soft_stop_dampening_strength" 
-          :label="$t('setting_soft_stop_dampening')" 
+          :label="$t('settings.soft_stop_dampening')" 
+          :help="$t('help.soft_stop_dampening')"
           suffix="%"
           :max="1000"
           @update:model-value="saveEffects"
@@ -47,26 +50,26 @@
       </BaseCard>
 
       <!-- Internal Filter -->
-      <BaseCard :title="$t('group_dampening')">
+      <BaseCard :title="$t('groups.dampening')">
         <BaseSlider 
           v-model="effects.integrated_spring_strength" 
-          :label="$t('setting_integrated_spring')" 
-          :help="$t('help_integrated_spring_strength')"
+          :label="$t('settings.integrated_spring')" 
+          :help="$t('help.integrated_spring_strength')"
           suffix="%"
           @update:model-value="saveEffects"
         />
         <BaseSlider 
           v-model="effects.static_dampening_strength" 
-          :label="$t('setting_static_dampening')" 
-          :help="$t('help_static_dampening_strength')"
+          :label="$t('settings.static_dampening')" 
+          :help="$t('help.static_dampening_strength')"
           suffix="%"
           :max="1000"
           @update:model-value="saveEffects"
         />
         <BaseSlider 
           v-model="effects.dynamic_dampening_strength" 
-          :label="$t('setting_dynamic_dampening')" 
-          :help="$t('help_dynamic_dampening_strength')"
+          :label="$t('settings.dynamic_dampening')" 
+          :help="$t('help.dynamic_dampening_strength')"
           suffix="%"
           :max="1000"
           @update:model-value="saveEffects"
@@ -74,32 +77,32 @@
       </BaseCard>
 
       <!-- DirectX (Game Effects) -->
-      <BaseCard :title="$t('group_directx')">
+      <BaseCard :title="$t('groups.directx')">
         <BaseSlider 
           v-model="effects.direct_x_constant_strength" 
-          :label="$t('setting_dx_constant')" 
-          :help="$t('help_direct_x_constant_strength')"
+          :label="$t('settings.dx_constant')" 
+          :help="$t('help.direct_x_constant_strength')"
           suffix="%"
           @update:model-value="saveEffects"
         />
         <BaseSlider 
           v-model="effects.direct_x_periodic_strength" 
-          :label="$t('setting_dx_periodic')" 
-          :help="$t('help_direct_x_periodic_strength')"
+          :label="$t('settings.dx_periodic')" 
+          :help="$t('help.direct_x_periodic_strength')"
           suffix="%"
           @update:model-value="saveEffects"
         />
         <BaseSlider 
           v-model="effects.direct_x_spring_strength" 
-          :label="$t('setting_dx_spring')" 
-          :help="$t('help_direct_x_spring_strength')"
+          :label="$t('settings.dx_spring')" 
+          :help="$t('help.direct_x_spring_strength')"
           suffix="%"
           @update:model-value="saveEffects"
         />
         <BaseSwitch 
           v-model="invertGameForce" 
-          :label="$t('setting_invert_game_force')" 
-          :help="$t('help_invert_game_force')"
+          :label="$t('settings.invert_game_force')" 
+          :help="$t('help.invert_game_force')"
           @update:model-value="handleInvert"
         />
       </BaseCard>

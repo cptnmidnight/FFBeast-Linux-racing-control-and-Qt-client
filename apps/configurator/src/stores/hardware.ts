@@ -10,6 +10,8 @@ import { useUIStore } from './ui';
 import { t } from '../i18n';
 import { useLogStore } from './logs';
 
+import type { KeyMapping } from '../models/KeyMapping';
+
 export const useHardwareStore = defineStore('hardware', {
     state: () => ({
         isConnected: false,
@@ -124,7 +126,7 @@ export const useHardwareStore = defineStore('hardware', {
             const ui = useUIStore();
 
             if (!this.isConnected) {
-                ui.showToast(t('toast_device_not_connected'), 'error');
+                ui.showToast(t('toasts.device_not_connected'), 'error');
                 this.log('warn', 'Cannot reboot: device not connected');
                 return;
             }
@@ -133,10 +135,10 @@ export const useHardwareStore = defineStore('hardware', {
                 await HardwareService.reboot();
                 this.log('info', 'Reboot command sent successfully');
                 this.rebootRequired = false;
-                ui.showToast(t('toast_device_rebooting'), 'success');
+                ui.showToast(t('toasts.device_rebooting'), 'success');
             } catch (err) {
                 this.log('error', `reboot() error: ${err}`);
-                ui.showToast(`${t('toast_reboot_failed')}: ${err}`, 'error');
+                ui.showToast(`${t('toasts.reboot_failed')}: ${err}`, 'error');
                 throw err;
             }
         },
@@ -146,7 +148,7 @@ export const useHardwareStore = defineStore('hardware', {
             const ui = useUIStore();
 
             if (!this.isConnected) {
-                ui.showToast(t('toast_device_not_connected'), 'error');
+                ui.showToast(t('toasts.device_not_connected'), 'error');
                 this.log('warn', 'Cannot reset center: device not connected');
                 return;
             }
@@ -154,10 +156,10 @@ export const useHardwareStore = defineStore('hardware', {
                 this.log('debug', 'Calling HardwareService.resetCenter()...');
                 await HardwareService.resetCenter();
                 this.log('info', 'Center reset successfully');
-                ui.showToast(t('toast_center_reset'), 'success');
+                ui.showToast(t('toasts.center_reset'), 'success');
             } catch (err) {
                 this.log('error', `resetCenter() error: ${err}`);
-                ui.showToast(`${t('toast_reset_failed')}: ${err}`, 'error');
+                ui.showToast(`${t('toasts.reset_failed')}: ${err}`, 'error');
                 throw err;
             }
         },
@@ -167,7 +169,7 @@ export const useHardwareStore = defineStore('hardware', {
             const ui = useUIStore();
 
             if (!this.isConnected) {
-                ui.showToast(t('toast_device_not_connected'), 'error');
+                ui.showToast(t('toasts.device_not_connected'), 'error');
                 this.log('warn', 'Cannot save: device not connected');
                 return;
             }
@@ -176,10 +178,10 @@ export const useHardwareStore = defineStore('hardware', {
                 await HardwareService.saveToEeprom();
                 this.log('info', 'Settings saved to EEPROM successfully');
                 this.hasUnsavedChanges = false;
-                ui.showToast(t('toast_settings_saved'), 'success');
+                ui.showToast(t('toasts.settings_saved'), 'success');
             } catch (err) {
                 this.log('error', `saveToEeprom() error: ${err}`);
-                ui.showToast(`${t('toast_save_failed')}: ${err}`, 'error');
+                ui.showToast(`${t('toasts.save_failed')}: ${err}`, 'error');
                 throw err;
             }
         },
@@ -211,7 +213,7 @@ export const useHardwareStore = defineStore('hardware', {
             this.hasUnsavedChanges = true;
         },
 
-        async updateKeyboardMapping(mappings: any[]) {
+        async updateKeyboardMapping(mappings: KeyMapping[]) {
             await HardwareService.setKeyboardMapping(mappings);
         }
     }

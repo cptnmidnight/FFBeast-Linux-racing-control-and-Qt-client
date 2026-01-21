@@ -1,7 +1,7 @@
 <template>
   <section class="logs-card">
     <div class="card-header">
-      <h3>{{ $t('tab_logs') }}</h3>
+      <h3>{{ $t('tabs.logs') }}</h3>
     </div>
     <div class="logs-container" ref="logsContainer">
       <div v-for="(log, index) in logs" :key="index" :class="['log-entry', log.level]">

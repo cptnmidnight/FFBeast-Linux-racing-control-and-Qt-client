@@ -6,7 +6,7 @@
         :key="index" 
         class="pin-card"
       >
-        <span class="pin-label">{{ $t('pin_label') }} {{ index - 1 }}</span>
+        <span class="pin-label">{{ $t('labels.pin') }} {{ index - 1 }}</span>
         <BaseSelect 
           :model-value="pinModes[index - 1]" 
           :options="modeOptions" 
@@ -29,17 +29,17 @@ const pinModes = computed(() => store.gpio?.pin_mode ?? []);
 const pinCount = computed(() => pinModes.value.length);
 
 const modeOptions = [
-  { label: 'pin_mode_none', value: 0 },
-  { label: 'pin_mode_gpio', value: 1 },
-  { label: 'pin_mode_analog', value: 2 },
-  { label: 'pin_mode_spi_cs', value: 3 },
-  { label: 'pin_mode_spi_sck', value: 4 },
-  { label: 'pin_mode_spi_miso', value: 5 },
-  { label: 'pin_mode_enable_effects', value: 6 },
-  { label: 'pin_mode_center_reset', value: 7 },
-  { label: 'pin_mode_braking_pwm', value: 8 },
-  { label: 'pin_mode_effect_led', value: 9 },
-  { label: 'pin_mode_reboot', value: 10 },
+  { label: 'pins.modes.none', value: 0 },
+  { label: 'pins.modes.gpio', value: 1 },
+  { label: 'pins.modes.analog', value: 2 },
+  { label: 'pins.modes.spi_cs', value: 3 },
+  { label: 'pins.modes.spi_sck', value: 4 },
+  { label: 'pins.modes.spi_miso', value: 5 },
+  { label: 'pins.modes.enable_effects', value: 6 },
+  { label: 'pins.modes.center_reset', value: 7 },
+  { label: 'pins.modes.braking_pwm', value: 8 },
+  { label: 'pins.modes.effect_led', value: 9 },
+  { label: 'pins.modes.reboot', value: 10 },
 ];
 
 const updatePinMode = async (index: number, value: number) => {

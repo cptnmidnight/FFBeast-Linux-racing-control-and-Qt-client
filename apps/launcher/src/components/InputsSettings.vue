@@ -13,11 +13,10 @@
               @blur="saveToLocal"
             />
           </div>
-          <button class="icon-btn" @click="editMapping(index)">⚙️ {{ $t('btn_edit_mapping') || 'Mapear' }}</button>
+          <button class="icon-btn" @click="editMapping(index)">⚙️ {{ $t('btn_edit_mapping') }}</button>
         </div>
         
         <div class="adc-config-section">
-            <!-- Visual Calibration - Read Only / Visual Only for now -->
             <div class="calibration-row">
                  <div class="monitor-mini">
                     <div class="bar-bg">
@@ -25,7 +24,6 @@
                     </div>
                     <span class="raw-val">{{ getAxisValue(index) }}</span>
                  </div>
-
 
                  <div class="config-grid">
                     <BaseSlider 
@@ -42,7 +40,7 @@
                     />
                     <label class="invert-check">
                         <input type="checkbox" v-model="mapping.invert" @change="saveMapping"> 
-                        {{ $t('settings.gamepad.inverted') || 'Inverter' }}
+                        {{ $t('settings.gamepad.inverted') }}
                     </label>
                  </div>
             </div>
@@ -55,68 +53,66 @@
       </div>
     </div>
 
-    <!-- Save Button (Optional since we auto-save on change, but good for feedback) -->
-    <!-- <div class="actions-bar">
-        <button class="btn-primary" @click="saveMapping">Salvar Calibração</button>
-    </div> -->
-
     <!-- Mapping Modal -->
     <BaseModal 
       :show="showModal" 
-      :title="($t('axis_edit_title') || 'Editar Eixo') + ' ' + (editingIdx !== null ? (editingIdx + 1) : '')"
+      :title="$t('axis_edit_title') + ' ' + (editingIdx !== null ? (editingIdx + 1) : '')"
       @close="closeModal"
     >
       <div v-if="editingIdx !== null" class="modal-form">
         <div class="form-group">
-          <label>{{ $t('axis_custom_name') || 'Nome Personalizado' }}</label>
+          <label>{{ $t('axis_custom_name') }}</label>
           <input type="text" v-model="localMappings[editingIdx].name" class="base-input">
         </div>
 
-        <div class="section-divider">{{ $t('axis_joystick_mapping') || 'Mapeamento de Botão (Joystick)' }}</div>
+        <div class="section-divider">{{ $t('axis_joystick_mapping') }}</div>
         <div class="form-row">
           <BaseSelect 
             v-model="localMappings[editingIdx].btnLow" 
             :options="buttonOptions" 
-            :label="$t('axis_button_low') || 'Botão (Low < 20%)'"
+            :label="$t('axis_button_low')"
           />
           <BaseSelect 
             v-model="localMappings[editingIdx].btnHigh" 
             :options="buttonOptions" 
-            :label="$t('axis_button_high') || 'Botão (High > 80%)'"
+            :label="$t('axis_button_high')"
           />
         </div>
 
-        <div class="section-divider">{{ $t('axis_keyboard_mapping') || 'Mapeamento de Tecla (Teclado)' }}</div>
+        <div class="section-divider">{{ $t('axis_keyboard_mapping') }}</div>
         <div class="form-row">
           <BaseSelect 
             v-model="localMappings[editingIdx].keyLow" 
             :options="keyOptions" 
-            :label="$t('axis_start') || 'Tecla (Low < 20%)'"
+            :label="$t('axis_start')"
           />
           <BaseSelect 
             v-model="localMappings[editingIdx].keyHigh" 
             :options="keyOptions" 
-            :label="$t('axis_end') || 'Tecla (High > 80%)'"
+            :label="$t('axis_end')"
           />
         </div>
         
-        <p class="hint">Define quais teclas ou botões são acionados quando o eixo atinge os extremos.</p>
+        <p class="hint">{{ $t('axis_mapping_hint') }}</p>
       </div>
       <template #footer>
-        <button class="btn-outline" @click="closeModal">{{ $t('modal_cancel') || 'Cancelar' }}</button>
-        <button class="btn-primary" @click="saveMapping">{{ $t('modal_save') || 'Salvar' }}</button>
+        <button class="btn-outline" @click="closeModal">{{ $t('modal_cancel') }}</button>
+        <button class="btn-primary" @click="saveMapping">{{ $t('modal_save') }}</button>
       </template>
     </BaseModal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, computed } from 'vue';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
+import { useI18n } from 'vue-i18n';
 import BaseSlider from './common/BaseSlider.vue';
 import BaseModal from './common/BaseModal.vue';
 import BaseSelect from './common/BaseSelect.vue';
+
+const { t } = useI18n();
 
 interface LocalMapping {
     name: string;
@@ -131,7 +127,14 @@ interface LocalMapping {
 
 // 6 Axes: Wheel, Accel, Brake, Clutch, Aux1, Aux2
 const AXIS_COUNT = 6;
-const DEFAULT_NAMES = ["Volante", "Acelerador", "Freio", "Embreagem", "Aux 1", "Aux 2"];
+const DEFAULT_NAMES = computed(() => [
+  t('axis_names.wheel'),
+  t('axis_names.throttle'),
+  t('axis_names.brake'),
+  t('axis_names.clutch'),
+  t('axis_names.aux') + ' 1',
+  t('axis_names.aux') + ' 2'
+]);
 
 const localMappings = ref<LocalMapping[]>([]);
 const showModal = ref(false);
@@ -139,8 +142,8 @@ const editingIdx = ref<number | null>(null);
 const currentStatus = ref<any>(null);
 
 const getAxisLabel = (index: number) => {
-  if (index === 0) return "Eixo X (Volante)";
-  return `Eixo ${index + 1}`;
+  if (index === 0) return t('axis_labels.x_wheel');
+  return t('axis_labels.generic', { n: index + 1 });
 };
 
 const getAxisValue = (index: number) => {
@@ -177,7 +180,7 @@ const initConfig = async () => {
       
       // Initialize with defaults
       const initial: LocalMapping[] = Array(AXIS_COUNT).fill(0).map((_, i) => ({
-        name: DEFAULT_NAMES[i],
+        name: DEFAULT_NAMES.value[i],
         min: 0,
         max: 65535,
         invert: false,
@@ -209,7 +212,7 @@ const initConfig = async () => {
       console.error("Failed to load mappings", e);
       // Fallback
        localMappings.value = Array(AXIS_COUNT).fill(0).map((_, i) => ({
-        name: DEFAULT_NAMES[i],
+        name: DEFAULT_NAMES.value[i],
         min: 0,
         max: 65535,
         invert: false,

@@ -1,8 +1,8 @@
 export interface KeyMapping {
     id: string;
-    source_type: 'button' | 'axis';
+    source_type: 'axis' | 'button';
     index: number;
-    trigger: 'press' | 'high' | 'low';
+    trigger: 'high' | 'low';
     key: string;
-    threshold?: number;
+    threshold: number;
 }

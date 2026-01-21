@@ -1,262 +1,84 @@
 <template>
   <div class="inputs-tab">
     <div class="axes-grid">
-      <div v-for="index in activeIndices" :key="index" class="axis-card">
-        <div class="axis-header">
-          <div class="axis-info">
-            <span class="axis-label">{{ getAxisLabel(index) }}</span>
-            <input 
-              type="text" 
-              v-model="axisNames[index]" 
-              class="axis-name-input"
-              :placeholder="DEFAULT_NAMES[index]"
-              @blur="saveAxisName"
-            />
-          </div>
-          <button class="icon-btn" @click="editMapping(index)" :data-help="'help_edit_mapping'">⚙️ {{ $t('btn_edit_mapping') }}</button>
-        </div>
-        
-        <div class="adc-config-section" v-if="index < 3">
-          <BaseSlider 
-            :model-value="store.adc?.raxis_min[index] ?? 0" 
-            :label="$t('setting_min')" 
-            :max="32767" 
-            @update:model-value="v => updateMin(index, v)"
-          />
-          <BaseSlider 
-            :model-value="store.adc?.raxis_max[index] ?? 32767" 
-            :label="$t('setting_max')" 
-            :max="32767" 
-            @update:model-value="v => updateMax(index, v)"
-          />
-          <BaseSlider 
-            :model-value="store.adc?.raxis_smoothing[index] ?? 0" 
-            :label="$t('setting_axis_smoothing') || 'Smoothing'" 
-            :max="100" 
-            suffix="%"
-            @update:model-value="v => updateSmoothing(index, v)"
-          />
-          <BaseSlider 
-            :model-value="store.adc?.raxis_to_button_low[index] ?? 0" 
-            :label="$t('setting_axis_btn_low') || 'Button Low'" 
-            :max="100" 
-            suffix="%"
-            @update:model-value="v => updateBtnLow(index, v)"
-          />
-          <BaseSlider 
-            :model-value="store.adc?.raxis_to_button_high[index] ?? 100" 
-            :label="$t('setting_axis_btn_high') || 'Button High'" 
-            :max="100" 
-            suffix="%"
-            @update:model-value="v => updateBtnHigh(index, v)"
-          />
-          <BaseSwitch 
-            :model-value="store.adc?.raxis_invert[index] === 1" 
-            :label="$t('setting_axis_invert')" 
-            :help="$t('help_axis_invert')"
-            @update:model-value="v => updateInvert(index, v)"
-          />
-        </div>
-        <div v-else class="adc-info">
-          <p>Hardware calibration only for primary axes.</p>
-        </div>
-      </div>
+      <AxisMappingRow
+        v-for="index in activeIndices"
+        :key="index"
+        :index="index"
+        :label="getAxisLabel(index)"
+        v-model="axisNames[index]"
+        :raw-value="getAxisValue(index)"
+        :default-name="DEFAULT_NAMES[index]"
+        @edit="startEditing(index)"
+        @save-name="saveAxisName"
+      />
     </div>
 
     <!-- Mapping Modal -->
-    <BaseModal 
-      :show="showModal" 
-      :title="$t('axis_edit_title') + ' ' + (editingIdx !== null ? (editingIdx + 1) : '')"
+    <MappingEditModal
+      v-if="editingIdx !== null"
+      :show="showModal"
+      :axis-index="editingIdx"
+      :axis-name="axisNames[editingIdx] || DEFAULT_NAMES[editingIdx]"
+      :axis-value="getAxisValue(editingIdx)"
+      :initial-config="getCurrentMappingConfig(editingIdx)"
       @close="closeModal"
-    >
-      <div v-if="editingIdx !== null" class="modal-form">
-        <div class="form-group">
-          <label>{{ $t('axis_custom_name') }}</label>
-          <input type="text" v-model="axisNames[editingIdx]" class="base-input">
-        </div>
-
-        <div class="section-divider">{{ $t('axis_joystick_mapping') }}</div>
-        <div class="form-row">
-          <BaseSelect 
-            v-model="mappings[editingIdx].btnLow" 
-            :options="buttonOptions" 
-            :label="$t('axis_button_low')"
-            :use-i18n="true"
-          />
-          <BaseSelect 
-            v-model="mappings[editingIdx].btnHigh" 
-            :options="buttonOptions" 
-            :label="$t('axis_button_high')"
-            :use-i18n="true"
-          />
-        </div>
-
-        <div class="section-divider">{{ $t('axis_keyboard_mapping') }}</div>
-        
-        <div class="deadzone-monitor">
-            <div class="monitor-track">
-                <div class="monitor-fill" :style="{ width: ((currentEditingValue / 327.67)) + '%' }"></div>
-                <div class="monitor-marker marker-low" :style="{ left: ((mappings[editingIdx].thresholdLow ?? 2000) / 327.67) + '%' }"></div>
-                <div class="monitor-marker marker-high" :style="{ left: ((mappings[editingIdx].thresholdHigh ?? 30000) / 327.67) + '%' }"></div>
-            </div>
-            <div class="monitor-labels">
-                <span>0</span>
-                <span>{{ currentEditingValue }}</span>
-                <span>32767</span>
-            </div>
-        </div>
-
-        <div class="form-row">
-          <div class="mapping-group">
-             <BaseSelect 
-                v-model="mappings[editingIdx].keyLow" 
-                :options="keyOptions" 
-                :label="$t('axis_key_low')"
-                :use-i18n="true"
-             />
-             <div class="slider-mini">
-                <label>Trigger &lt; {{ mappings[editingIdx].thresholdLow }}</label>
-                <input type="range" min="0" max="32767" v-model.number="mappings[editingIdx].thresholdLow">
-             </div>
-          </div>
-          
-          <div class="mapping-group">
-             <BaseSelect 
-                v-model="mappings[editingIdx].keyHigh" 
-                :options="keyOptions" 
-                :label="$t('axis_key_high')"
-                :use-i18n="true"
-              />
-             <div class="slider-mini">
-                 <label>Trigger &gt; {{ mappings[editingIdx].thresholdHigh }}</label>
-                 <input type="range" min="0" max="32767" v-model.number="mappings[editingIdx].thresholdHigh">
-             </div>
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <button class="btn-outline" @click="closeModal">{{ $t('modal_cancel') }}</button>
-        <button class="btn-primary" @click="saveMapping">{{ $t('modal_save') }}</button>
-      </template>
-    </BaseModal>
+      @save="handleModalSave"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useHardwareStore } from '../../stores/hardware';
-import BaseSlider from '../common/BaseSlider.vue';
-import BaseSwitch from '../common/BaseSwitch.vue';
-import BaseModal from '../common/BaseModal.vue';
-import BaseSelect from '../common/BaseSelect.vue';
-import type { AxisMapping } from '../../models/AxisMapping';
+import { useHardwareStream } from '../../composables/useHardwareStream';
+import AxisMappingRow from '../widgets/AxisMappingRow.vue';
+import MappingEditModal, { type MappingConfig } from '../widgets/MappingEditModal.vue';
+import type { KeyMapping } from '../../models/KeyMapping';
+import { useMappingPersistence, DEFAULT_NAMES } from '../../composables/useMappingPersistence';
 
 const store = useHardwareStore();
+const { status: hardwareStatus } = useHardwareStream();
 
-// Live monitoring of the axis being edited
-const currentEditingValue = computed(() => {
-  if (editingIdx.value === null || !store.status?.adc) return 0;
-  return store.status.adc[editingIdx.value] ?? 0;
-});
+// State
+const showModal = ref(false);
+const editingIdx = ref<number | null>(null);
 
+const { axisNames, mappings, load: loadConfig, save: saveConfig } = useMappingPersistence();
+
+// Computed
 const activeIndices = computed(() => {
-  return [0, 1, 2, 3, 4, 5].filter(i => {
+  return [0, 1, 2, 3, 4, 5, 6, 7].filter(i => {
     if (i < 3) return true;
     return store.gpio?.pin_mode[i] === 2; // Analog mode
   });
 });
 
+// Implementation
 const getAxisLabel = (index: number) => {
   if (index < 3) return `AXIS ${['X', 'Y', 'Z'][index]}`;
   return `GPIO ${index}`;
 };
 
-const axisNames = ref<string[]>([]);
-const mappings = ref<AxisMapping[]>([]);
-const showModal = ref(false);
-const editingIdx = ref<number | null>(null);
-
-const DEFAULT_NAMES = ["Throttle", "Brake", "Clutch", "Aux 4", "Aux 5", "Aux 6", "Aux 7", "Aux 8"];
-
-const initConfig = () => {
-  const savedNames = localStorage.getItem('ffbeast_axis_names');
-  axisNames.value = savedNames ? JSON.parse(savedNames) : [...DEFAULT_NAMES];
-
-  const savedMappings = localStorage.getItem('ffbeast_axis_mappings');
-  if (savedMappings) {
-    // Migration: Ensure new threshold fields exist
-    mappings.value = JSON.parse(savedMappings).map((m: any) => ({
-      ...m,
-      thresholdLow: m.thresholdLow ?? 2000,
-      thresholdHigh: m.thresholdHigh ?? 30000
-    }));
-  } else {
-    mappings.value = Array(8).fill(0).map(() => ({
-      name: '',
-      min: 0,
-      max: 32767,
-      invert: false,
-      keyLow: '',
-      keyHigh: '',
-      btnLow: null,
-      btnHigh: null,
-      thresholdLow: 2000,
-      thresholdHigh: 30000
-    }));
-  }
+const getAxisValue = (index: number) => {
+  return hardwareStatus.value?.adc[index] ?? 0;
 };
 
-const updateMin = (idx: number, val: number) => {
-  if (!store.adc) return;
-  const mins = [...store.adc.raxis_min];
-  mins[idx] = val;
-  store.updateADC({ raxis_min: mins });
+const getCurrentMappingConfig = (index: number): MappingConfig => {
+  const m = mappings.value[index];
+  // Ensure we return a valid config object, filling missing fields if necessary
+  // Assuming 'm' has the compatible structure, otherwise defaults.
+  return {
+    keyLow: m?.keyLow || '',
+    thresholdLow: m?.thresholdLow ?? 2000,
+    keyHigh: m?.keyHigh || '',
+    thresholdHigh: m?.thresholdHigh ?? 30000,
+    btnLow: m?.btnLow ?? null,
+    btnHigh: m?.btnHigh ?? null
+  };
 };
 
-const updateMax = (idx: number, val: number) => {
-  if (!store.adc) return;
-  const maxes = [...store.adc.raxis_max];
-  maxes[idx] = val;
-  store.updateADC({ raxis_max: maxes });
-};
-
-const updateInvert = (idx: number, val: boolean) => {
-  if (!store.adc) return;
-  const invs = [...store.adc.raxis_invert];
-  invs[idx] = val ? 1 : 0;
-  store.updateADC({ raxis_invert: invs });
-};
-
-const updateSmoothing = (idx: number, val: number) => {
-  if (!store.adc) return;
-  const vals = [...store.adc.raxis_smoothing];
-  vals[idx] = val;
-  store.updateADC({ raxis_smoothing: vals });
-};
-
-const updateBtnLow = (idx: number, val: number) => {
-  if (!store.adc) return;
-  const vals = [...store.adc.raxis_to_button_low];
-  vals[idx] = val;
-  store.updateADC({ raxis_to_button_low: vals });
-};
-
-const updateBtnHigh = (idx: number, val: number) => {
-  if (!store.adc) return;
-  const vals = [...store.adc.raxis_to_button_high];
-  vals[idx] = val;
-  store.updateADC({ raxis_to_button_high: vals });
-};
-
-const buttonOptions = [
-  { label: 'option_none', value: null },
-  ...Array.from({ length: 32 }, (_, i) => ({ label: `Button ${i + 1}`, value: i }))
-];
-
-const KEY_LIST = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "Up", "Down", "Left", "Right", "Space", "Enter", "Tab", "Shift", "Ctrl", "Alt", "Esc"];
-const keyOptions = [{ label: 'option_none', value: '' }, ...KEY_LIST.map(k => ({ label: k, value: k }))];
-
-const editMapping = (index: number) => {
+const startEditing = (index: number) => {
   editingIdx.value = index;
   showModal.value = true;
 };
@@ -266,23 +88,38 @@ const closeModal = () => {
   editingIdx.value = null;
 };
 
-const saveMapping = async () => {
-  // Save to localStorage
-  localStorage.setItem('ffbeast_axis_names', JSON.stringify(axisNames.value));
-  localStorage.setItem('ffbeast_axis_mappings', JSON.stringify(mappings.value));
+const saveAxisName = () => {
+  saveConfig(axisNames.value);
+};
+
+const handleModalSave = async (newName: string, config: MappingConfig) => {
+  if (editingIdx.value === null) return;
+  const idx = editingIdx.value;
+
+  // Update local state
+  axisNames.value[idx] = newName;
+  mappings.value[idx] = { ...mappings.value[idx], ...config };
+
+  // Persist
+  saveConfig(axisNames.value, mappings.value);
+
+  // Generate KeyMappings for backend
+  await pushKeyMappingsToBackend();
   
-  // Convert to KeyMapping format and send to backend
-  const keyMappings: any[] = [];
+  closeModal();
+};
+
+const pushKeyMappingsToBackend = async () => {
+  const keyMappings: KeyMapping[] = [];
   
-  // Iterate activeIndices effectively
   activeIndices.value.forEach(actualIndex => {
     const mapping = mappings.value[actualIndex];
     if (!mapping) return;
     
-    // High threshold mapping (Deadzone End / Trigger High)
+    // High threshold mapping
     if (mapping.keyHigh) {
       keyMappings.push({
-        id: `axis_${actualIndex}_high_${mapping.keyHigh}`,
+        id: `axis.${actualIndex}_high_${mapping.keyHigh}`,
         source_type: 'axis',
         index: actualIndex,
         trigger: 'high',
@@ -291,10 +128,10 @@ const saveMapping = async () => {
       });
     }
     
-    // Low threshold mapping (Deadzone Start / Trigger Low)
+    // Low threshold mapping
     if (mapping.keyLow) {
       keyMappings.push({
-        id: `axis_${actualIndex}_low_${mapping.keyLow}`,
+        id: `axis.${actualIndex}_low_${mapping.keyLow}`,
         source_type: 'axis',
         index: actualIndex,
         trigger: 'low',
@@ -303,26 +140,20 @@ const saveMapping = async () => {
       });
     }
   });
-  
-  // Send to backend
+
   if (keyMappings.length > 0) {
     try {
-      const { HardwareService } = await import('../../services/hardware_service');
-      await HardwareService.setKeyboardMapping(keyMappings);
+      await store.updateKeyboardMapping(keyMappings);
       store.log('info', `Configured ${keyMappings.length} axis keyboard mappings`);
     } catch (err) {
       store.log('error', `Failed to set keyboard mappings: ${err}`);
     }
   }
-  
-  closeModal();
 };
 
-const saveAxisName = () => {
-  localStorage.setItem('ffbeast_axis_names', JSON.stringify(axisNames.value));
-};
-
-onMounted(initConfig);
+onMounted(() => {
+  loadConfig();
+});
 </script>
 
 <style scoped>
@@ -332,271 +163,7 @@ onMounted(initConfig);
 
 .axes-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
-}
-
-.axis-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 1rem;
-  backdrop-filter: blur(10px);
-}
-
-.axis-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.axis-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.axis-label {
-  font-size: 0.7rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
-}
-
-.axis-name {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--accent);
-}
-
-.axis-name-input {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: var(--accent);
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid transparent;
-  outline: none;
-  padding: 2px 4px;
-  transition: all 0.2s;
-  max-width: 200px;
-}
-
-.axis-name-input:hover {
-  border-bottom-color: var(--border);
-}
-
-.axis-name-input:focus {
-  border-bottom-color: var(--accent);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.icon-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 0.85rem;
-  opacity: 0.6;
-  transition: opacity 0.2s;
-  padding: 4px 8px;
-  color: var(--text-dim);
-}
-
-.icon-btn:hover {
-  opacity: 1;
-  color: var(--accent);
-}
-
-.calibration-row {
-  display: flex;
-  gap: 2rem;
-  align-items: center;
-}
-
-.monitor-mini {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  width: 40px;
-}
-
-.bar-bg {
-  width: 12px;
-  height: 120px;
-  background: rgba(255,255,255,0.05);
-  border-radius: 6px;
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-}
-
-.bar-fill {
-  width: 100%;
-  background: var(--accent);
-  transition: height 0.05s linear;
-}
-
-.raw-val {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  color: var(--text-dim);
-}
-
-.config-grid {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 0.5rem;
-}
-
-.adc-config-section {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.adc-info {
-  color: var(--text-dim);
-  font-style: italic;
-  font-size: 0.8rem;
-  text-align: center;
-  padding: 1rem;
-}
-
-.modal-form {
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1.5rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.form-group label {
-  font-size: 0.85rem;
-  color: var(--text-dim);
-}
-
-.base-input {
-  background: rgba(0,0,0,0.3);
-  border: 1px solid var(--border);
-  color: var(--text-main);
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
-  outline: none;
-}
-
-.base-input:focus {
-  border-color: var(--accent);
-}
-
-.section-divider {
-  font-size: 0.75rem;
-  font-weight: 800;
-  text-transform: uppercase;
-  color: var(--accent);
-  border-bottom: 1px solid var(--accent-muted);
-  padding-bottom: 4px;
-  margin-top: 0.5rem;
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.btn-outline,
-.btn-primary {
-  padding: 10px 20px;
-  border-radius: var(--radius-sm);
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-}
-
-.btn-outline {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-}
-
-.btn-outline:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: var(--text-main);
-  color: var(--text-main);
-}
-
-.btn-primary {
-  background: var(--accent);
-  color: var(--bg-main);
-  box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
-}
-
-.btn-primary:hover {
-  background: var(--primary);
-  box-shadow: 0 0 30px rgba(0, 212, 255, 0.5);
-  transform: translateY(-1px);
-}
-.deadzone-monitor {
-  background: rgba(0,0,0,0.2);
-  padding: 10px;
-  border-radius: 6px;
-  margin-bottom: 1rem;
-}
-.monitor-track {
-  height: 20px;
-  background: rgba(255,255,255,0.1);
-  border-radius: 10px;
-  position: relative;
-  overflow: visible;
-  margin-bottom: 5px;
-}
-.monitor-fill {
-  height: 100%;
-  background: var(--accent);
-  border-radius: 10px;
-  transition: width 0.05s linear;
-}
-.monitor-marker {
-  position: absolute;
-  top: -4px;
-  bottom: -4px;
-  width: 2px;
-  background: #fff;
-  z-index: 2;
-  box-shadow: 0 0 4px rgba(0,0,0,0.5);
-}
-.marker-low { background: #ff4444; }
-.marker-high { background: #44ff44; }
-.monitor-labels {
-  display: flex;
-  justify-content: space-between;
-  font-size: 0.7rem;
-  color: var(--text-dim);
-}
-.mapping-group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.slider-mini {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.slider-mini label {
-  font-size: 0.75rem;
-  color: var(--text-dim);
-}
-.slider-mini input {
-  width: 100%;
 }
 </style>

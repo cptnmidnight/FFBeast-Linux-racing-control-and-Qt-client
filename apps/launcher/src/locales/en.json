@@ -110,5 +110,18 @@
     "axis_key_high": "Key (High)",
     "modal_save": "Save",
     "modal_cancel": "Cancel",
-    "setting_min_help": "Hardware calibration (coming soon)"
+    "setting_min_help": "Hardware calibration (coming soon)",
+    "option_none": "None",
+    "axis_mapping_hint": "Define which keys or buttons are triggered when the axis reaches the extremes.",
+    "axis_names": {
+        "wheel": "Wheel",
+        "throttle": "Throttle",
+        "brake": "Brake",
+        "clutch": "Clutch",
+        "aux": "Aux"
+    },
+    "axis_labels": {
+        "x_wheel": "Axis X (Wheel)",
+        "generic": "Axis {n}"
+    }
 }

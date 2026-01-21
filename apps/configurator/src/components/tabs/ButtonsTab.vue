@@ -6,7 +6,7 @@
         :key="index" 
         class="button-card"
       >
-        <span class="btn-label">{{ $t('btn_label') }} {{ index }}</span>
+        <span class="btn-label">{{ $t('buttons.label') }} {{ index }}</span>
         <BaseSelect 
           :model-value="buttonModes[index - 1]" 
           :options="modeOptions" 
@@ -28,10 +28,10 @@ const store = useHardwareStore();
 const buttonModes = computed(() => store.gpio?.button_mode ?? []);
 
 const modeOptions = [
-  { label: 'btn_mode_none', value: 0 },
-  { label: 'btn_mode_normal', value: 1 },
-  { label: 'btn_mode_inverted', value: 2 },
-  { label: 'btn_mode_pulse', value: 3 },
+  { label: 'modes.btn.none', value: 0 },
+  { label: 'modes.btn.normal', value: 1 },
+  { label: 'modes.btn.inverted', value: 2 },
+  { label: 'modes.btn.pulse', value: 3 },
 ];
 
 const updateButtonMode = async (index: number, value: number) => {

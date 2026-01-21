@@ -1,19 +1,19 @@
 <template>
   <div class="license-tab">
-    <BaseCard :title="$t('license_info')">
+    <BaseCard :title="$t('license.info')">
       <div class="license-status">
         <div class="status-icon" :class="{ active: isLicensed }">
           {{ isLicensed ? '✅' : '❌' }}
         </div>
         <div class="status-details">
-          <h4>{{ isLicensed ? $t('status_activated') : $t('status_trial') }}</h4>
+          <h4>{{ isLicensed ? $t('status.activated') : $t('status.trial') }}</h4>
           <div class="id-row">
-            <span class="label">{{ $t('device_id') }}:</span>
+            <span class="label">{{ $t('license.device_id') }}:</span>
             <code>{{ deviceId }}</code>
             <button class="btn-icon" @click="copyId" :title="$t('tooltip_copy_id')">📋</button>
           </div>
           <div v-if="serialKey" class="id-row">
-            <span class="label">{{ $t('serial_key') }}:</span>
+            <span class="label">{{ $t('license.serial_key') }}:</span>
             <code>{{ serialKey }}</code>
             <button class="btn-icon" @click="copySerialKey" :title="$t('tooltip_copy_serial')">📋</button>
           </div>
@@ -21,13 +21,13 @@
       </div>
 
       <div class="license-activation">
-        <h3>{{ $t('license_activation') }}</h3>
-        <p class="desc">{{ $t('serial_placeholder') }}</p>
+        <h3>{{ $t('license.activation') }}</h3>
+        <p class="desc">{{ $t('license.serial_placeholder') }}</p>
         <div class="input-group">
-          <input type="text" :placeholder="$t('serial_placeholder')" v-model="licenseKey" />
+          <input type="text" :placeholder="$t('license.serial_placeholder')" v-model="licenseKey" />
           <div class="btn-group">
-            <button class="btn-primary" @click="activate">{{ $t('btn_activate') }}</button>
-            <button class="btn-outline" @click="importFile">{{ $t('btn_import') }}</button>
+            <button class="btn-primary" @click="activate">{{ $t('buttons.activate') }}</button>
+            <button class="btn-outline" @click="importFile">{{ $t('buttons.import') }}</button>
           </div>
         </div>
       </div>

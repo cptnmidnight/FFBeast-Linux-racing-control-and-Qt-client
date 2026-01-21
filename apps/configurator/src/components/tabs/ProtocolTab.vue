@@ -1,10 +1,10 @@
 <template>
   <div class="protocol-tab">
     <div class="card wide">
-      <h3>{{ $t('group_extension') }}</h3>
+      <h3>{{ $t('groups.extension') }}</h3>
       <div class="setting-row">
         <span class="setting-label">
-          {{ $t('setting_ext_mode') }}
+          {{ $t('settings.ext_mode') }}
         </span>
         <BaseSelect 
           v-model="extensionMode" 
@@ -17,29 +17,29 @@
     </div>
 
     <!-- SPI Configuration (Visible for all SPI modes) -->
-    <BaseCard v-if="extensionMode >= 1" :title="$t('group_spi')">
+    <BaseCard v-if="extensionMode >= 1" :title="$t('groups.spi')">
       <div class="spi-grid">
         <BaseSelect 
           v-model="spiSettings.spi_mode" 
-          :label="$t('setting_spi_mode')"
+          :label="$t('settings.spi_mode')"
           :options="spiModeOptions"
           @update:model-value="saveSpi"
         />
         <BaseSelect 
           v-model="spiSettings.spi_latch_mode" 
-          :label="$t('setting_spi_latch')"
+          :label="$t('settings.spi_latch')"
           :options="latchModeOptions"
           @update:model-value="saveSpi"
         />
         <BaseSlider 
           v-model="spiSettings.spi_latch_delay" 
-          :label="$t('setting_spi_latch_delay')"
+          :label="$t('settings.spi_latch_delay')"
           suffix="µs"
           @update:model-value="saveSpi"
         />
         <BaseSlider 
           v-model="spiSettings.spi_clk_pulse_length" 
-          :label="$t('setting_spi_pulse')"
+          :label="$t('settings.spi_pulse')"
           suffix="µs"
           @update:model-value="saveSpi"
         />
@@ -50,23 +50,23 @@
       <h3 class="info-title">📘 {{ $t(currentModeTitle) }}</h3>
       
       <div class="protocol-info-section">
-        <h4>{{ $t('protocol_desc_title') }}</h4>
-        <p>{{ $t(`protocol_desc_${currentModeDetail}`) }}</p>
+        <h4>{{ $t('protocol.desc.title') }}</h4>
+        <p>{{ $t(`protocol.desc.${currentModeDetail}`) }}</p>
       </div>
       
       <div class="protocol-info-section">
-        <h4>{{ $t('protocol_compat_title') }}</h4>
-        <p>{{ $t(`protocol_compat_${currentModeDetail}`) }}</p>
+        <h4>{{ $t('protocol.compat.title') }}</h4>
+        <p>{{ $t(`protocol.compat.${currentModeDetail}`) }}</p>
       </div>
       
       <div class="protocol-info-section">
-        <h4>{{ $t('protocol_config_title') }}</h4>
-        <p>{{ $t(`protocol_config_${currentModeDetail}`) }}</p>
+        <h4>{{ $t('protocol.config.title') }}</h4>
+        <p>{{ $t(`protocol.config.${currentModeDetail}`) }}</p>
       </div>
       
       <div class="protocol-info-section">
-        <h4>💡 {{ $t('protocol_tips_title') }}</h4>
-        <p>{{ $t(`protocol_tips_${currentModeDetail}`) }}</p>
+        <h4>💡 {{ $t('protocol.tips.title') }}</h4>
+        <p>{{ $t(`protocol.tips.${currentModeDetail}`) }}</p>
       </div>
     </div>
   </div>
@@ -90,12 +90,12 @@ const spiSettings = reactive({
 });
 
 const modeOptions = [
-  { label: 'mode_none', value: 0 },
-  { label: 'mode_spi_custom', value: 1 },
-  { label: 'mode_spi_3xcd4021', value: 2 },
-  { label: 'mode_spi_3xsn74hc165', value: 3 },
-  { label: 'mode_spi_tm', value: 4 },
-  { label: 'mode_spi_vpc', value: 5 },
+  { label: 'modes.extension.none', value: 0 },
+  { label: 'modes.spi.custom', value: 1 },
+  { label: 'modes.spi.3xcd4021', value: 2 },
+  { label: 'modes.spi.3xsn74hc165', value: 3 },
+  { label: 'modes.extension.spi_tm', value: 4 },
+  { label: 'modes.spi.vpc', value: 5 },
 ];
 
 const spiModeOptions = [
@@ -110,10 +110,10 @@ const latchModeOptions = [
   { label: 'Latch DOWN', value: 1 },
 ];
 
-const titleKeys = ['mode_none', 'mode_spi_custom', 'mode_spi_3xcd4021', 'mode_spi_3xsn74hc165', 'mode_spi_tm', 'mode_spi_vpc'];
+const titleKeys = ['modes.extension.none', 'modes.spi.custom', 'modes.spi.3xcd4021', 'modes.spi.3xsn74hc165', 'modes.extension.spi_tm', 'modes.spi.vpc'];
 const detailKeys = ['none', 'custom', 'tm_style', '165_style', 'tm', 'vpc'];
 
-const currentModeTitle = computed(() => titleKeys[extensionMode.value] || 'mode_none');
+const currentModeTitle = computed(() => titleKeys[extensionMode.value] || 'modes.extension.none');
 const currentModeDetail = computed(() => detailKeys[extensionMode.value] || 'none');
 
 const handleModeChange = async (value: number) => {

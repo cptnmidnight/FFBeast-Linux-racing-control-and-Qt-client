@@ -2,12 +2,12 @@
   <div class="tools-tab">
     <div class="grid-layout">
       <!-- FFB Diagnostics -->
-      <BaseCard :title="$t('tool_ffb_diagnostics')">
-        <p class="description">{{ $t('tool_ffb_desc') }}</p>
+      <BaseCard :title="$t('tools.ffb_diagnostics')">
+        <p class="description">{{ $t('tools.ffb_desc') }}</p>
         <div class="test-controls">
           <BaseSlider 
             v-model="testValues.constant" 
-            :label="$t('tool_constant_force')" 
+            :label="$t('tools.constant_force')" 
             :min="-100" 
             :max="100" 
             suffix="%"
@@ -16,7 +16,7 @@
           />
           <BaseSlider 
             v-model="testValues.sine" 
-            :label="$t('tool_sine_wave')" 
+            :label="$t('tools.sine_wave')" 
             :min="0" 
             :max="100" 
             suffix="%"
@@ -25,7 +25,7 @@
           />
           <BaseSlider 
             v-model="testValues.damper" 
-            :label="$t('tool_damping_effect')" 
+            :label="$t('tools.damping_effect')" 
             :min="0" 
             :max="100" 
             suffix="%"
@@ -34,27 +34,27 @@
           />
         </div>
         <div class="tools-grid">
-          <button class="tool-btn stop" @click="stopAll">{{ $t('tool_stop_all') }}</button>
+          <button class="tool-btn stop" @click="stopAll">{{ $t('tools.stop_all') }}</button>
         </div>
       </BaseCard>
 
       <!-- Maintenance -->
-      <BaseCard :title="$t('tool_maintenance')">
-        <p class="description">{{ $t('tool_maintenance_desc') }}</p>
+      <BaseCard :title="$t('tools.maintenance')">
+        <p class="description">{{ $t('tools.maintenance_desc') }}</p>
         <div class="tools-grid">
-          <button class="tool-btn" @click="recalibrateCenter">{{ $t('tool_recalibrate') }}</button>
-          <button class="tool-btn warn" @click="enterDfu">{{ $t('tool_enter_dfu') }}</button>
-          <button class="tool-btn danger" @click="factoryReset">{{ $t('tool_factory_reset') }}</button>
+          <button class="tool-btn" @click="recalibrateCenter">{{ $t('tools.recalibrate') }}</button>
+          <button class="tool-btn warn" @click="enterDfu">{{ $t('tools.enter_dfu') }}</button>
+          <button class="tool-btn danger" @click="factoryReset">{{ $t('tools.factory_reset') }}</button>
         </div>
       </BaseCard>
 
       <!-- Input Mapping Service -->
-      <BaseCard :title="$t('tool_mapping_service')">
-        <p class="description">{{ $t('tool_mapping_desc') }}</p>
+      <BaseCard :title="$t('tools.mapping_service')">
+        <p class="description">{{ $t('tools.mapping_desc') }}</p>
         <div class="service-status-row">
           <span class="status-label">Status:</span>
           <span :class="['status-badge', { active: mappingActive }]">
-            {{ mappingActive ? $t('status_service_active') : $t('status_service_inactive') }}
+            {{ mappingActive ? $t('status.service_active') : $t('status.service_inactive') }}
           </span>
         </div>
         <div class="tools-grid">
@@ -63,14 +63,14 @@
             class="tool-btn success" 
             @click="toggleService(true)"
           >
-            {{ $t('btn_start_service') }}
+            {{ $t('buttons.start_service') }}
           </button>
           <button 
             v-else 
             class="tool-btn stop" 
             @click="toggleService(false)"
           >
-            {{ $t('btn_stop_service') }}
+            {{ $t('buttons.stop_service') }}
           </button>
         </div>
       </BaseCard>
@@ -84,6 +84,8 @@ import { useHardwareStore } from '../../stores/hardware';
 import { useUIStore } from '../../stores/ui';
 import BaseCard from '../common/BaseCard.vue';
 import BaseSlider from '../common/BaseSlider.vue';
+import type { AxisMapping } from '../../models/AxisMapping';
+import type { KeyMapping } from '../../models/KeyMapping';
 
 const store = useHardwareStore();
 const ui = useUIStore();
@@ -144,11 +146,11 @@ const toggleService = async (active: boolean) => {
     
     if (active) {
       // Load saved axis mappings from localStorage
-      const savedMappings = localStorage.getItem('ffbeast_axis_mappings');
+      const savedMappings = localStorage.getItem('ffbeast_axis.mappings');
       if (savedMappings) {
         try {
-          const mappings = JSON.parse(savedMappings);
-          const keyMappings: any[] = [];
+          const mappings: AxisMapping[] = JSON.parse(savedMappings);
+          const keyMappings: KeyMapping[] = [];
           
           // Determine which axes are active (same logic as InputsTab)
           const activeAxes = [0, 1, 2, 3, 4, 5].filter(i => {
@@ -156,7 +158,7 @@ const toggleService = async (active: boolean) => {
             return store.gpio?.pin_mode[i] === 2; // Analog mode
           });
           
-          mappings.forEach((mapping: any, arrayIdx: number) => {
+          mappings.forEach((mapping: AxisMapping, arrayIdx: number) => {
             // Get the real hardware axis index
             const actualAxisIndex = activeAxes[arrayIdx];
             if (actualAxisIndex === undefined) return;
@@ -164,7 +166,7 @@ const toggleService = async (active: boolean) => {
             // High threshold mapping
             if (mapping.keyHigh) {
               keyMappings.push({
-                id: `axis_${actualAxisIndex}_high_${mapping.keyHigh}`,
+                id: `axis.${actualAxisIndex}_high_${mapping.keyHigh}`,
                 source_type: 'axis',
                 index: actualAxisIndex,  // Use actual hardware index
                 trigger: 'high',
@@ -176,7 +178,7 @@ const toggleService = async (active: boolean) => {
             // Low threshold mapping
             if (mapping.keyLow) {
               keyMappings.push({
-                id: `axis_${actualAxisIndex}_low_${mapping.keyLow}`,
+                id: `axis.${actualAxisIndex}_low_${mapping.keyLow}`,
                 source_type: 'axis',
                 index: actualAxisIndex,  // Use actual hardware index
                 trigger: 'low',

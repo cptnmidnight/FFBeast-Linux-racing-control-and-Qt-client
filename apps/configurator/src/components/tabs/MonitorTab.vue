@@ -6,14 +6,14 @@
         <TorqueIndicator :torque="currentTorque" />
         <div class="control-card">
           <div class="control-group">
-            <span class="label">{{ $t('ffb_active_label') }}</span>
+            <span class="label">{{ $t('labels.ffb_active') }}</span>
             <BaseSwitch 
               v-model="ffbEnabled" 
               @update:model-value="toggleFFB" 
             />
           </div>
           <div class="status-badge" :class="{ connected: store.isConnected }">
-            {{ store.isConnected ? $t('status_connected') : $t('status_disconnected') }}
+            {{ store.isConnected ? $t('status.connected') : $t('status.disconnected') }}
           </div>
         </div>
       </div>

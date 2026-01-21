@@ -3,7 +3,7 @@
     <label v-if="label">{{ label }}</label>
     <div class="select-wrapper">
       <select :value="modelValue" @change="updateValue" class="select-input">
-        <option v-for="opt in options" :key="opt.value" :value="opt.value">
+        <option v-for="opt in options" :key="opt.value ?? 'null'" :value="opt.value">
           {{ useI18n ? $t(opt.label) : opt.label }}
         </option>
       </select>
@@ -15,11 +15,11 @@
 <script setup lang="ts">
 interface Option {
   label: string;
-  value: any;
+  value: string | number | null;
 }
 
 defineProps<{
-  modelValue: any;
+  modelValue: string | number | null;
   options: Option[];
   label?: string;
   useI18n?: boolean;
@@ -29,11 +29,15 @@ const emit = defineEmits(['update:modelValue']);
 
 const updateValue = (event: Event) => {
   const target = event.target as HTMLSelectElement;
-  let val: any = target.value;
-  // If numeric, cast it
-  if (!isNaN(Number(val)) && val !== '') {
+  let val: string | number | null = target.value;
+  
+  // Handle 'null' as string from the select element if we want real null
+  if (val === 'null' || val === '') {
+    val = null;
+  } else if (!isNaN(Number(val))) {
     val = Number(val);
   }
+  
   emit('update:modelValue', val);
 };
 </script>

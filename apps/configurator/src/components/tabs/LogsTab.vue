@@ -1,9 +1,9 @@
 <template>
   <div class="logs-tab">
-    <BaseCard :title="$t('tab_logs') + ' (Live)'" class="full-height">
+    <BaseCard :title="$t('tabs.logs') + ' (Live)'" class="full-height">
       <template #header>
         <div class="header-content">
-          <h3>{{ $t('tab_logs') }} (Live)</h3>
+          <h3>{{ $t('tabs.logs') }} (Live)</h3>
           <div class="actions">
             <label class="auto-scroll-toggle">
               <input type="checkbox" v-model="autoScroll">

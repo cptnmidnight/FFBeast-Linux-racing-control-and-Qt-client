@@ -22,7 +22,7 @@
           @click="currentTab = 'settings'"
         >
           <span class="icon">⚙️</span>
-          <span class="label">{{ $t('tab_settings') }}</span>
+          <span class="label">{{ $t('tabs.settings') }}</span>
         </div>
       </div>
 
@@ -38,15 +38,15 @@
       <header class="content-header">
         <h2 class="tab-title">{{ $t(currentTabLabel) }}</h2>
         <div class="header-actions">
-          <button class="btn-outline reboot" @click="handleReboot">{{ $t('btn_reboot') }}</button>
-          <button class="btn-outline" @click="handleResetCenter">{{ $t('btn_reset_center') }}</button>
+          <button class="btn-outline reboot" @click="handleReboot">{{ $t('buttons.reboot') }}</button>
+          <button class="btn-outline" @click="handleResetCenter">{{ $t('buttons.reset_center') }}</button>
           <button 
             :class="['btn-primary', { 'has-changes': store.hasUnsavedChanges, 'reboot-required': store.rebootRequired }]" 
             @click="handleSave"
-            :title="store.rebootRequired ? $t('warning_reboot_required') : ''"
+            :title="store.rebootRequired ? $t('warnings.reboot_required') : ''"
           >
             <span v-if="store.hasUnsavedChanges" class="unsaved-dot"></span>
-            {{ store.rebootRequired ? $t('btn_save_reboot') : $t('btn_save') }}
+            {{ store.rebootRequired ? $t('buttons.save_reboot') : $t('buttons.save') }}
           </button>
         </div>
       </header>
@@ -65,7 +65,7 @@
           <LogsTab v-else-if="currentTab === 'logs'" />
           <SettingsTab v-else-if="currentTab === 'settings'" />
           <div v-else class="placeholder-content">
-            <p>{{ $t('tab_in_progress') }} ({{ currentTab }})</p>
+            <p>{{ $t('tabs.in_progress') }} ({{ currentTab }})</p>
           </div>
         </Transition>
       </div>
@@ -102,26 +102,26 @@ const { t } = useI18n();
 const currentTab = ref('monitor');
 
 const mainTabs = [
-  { id: 'monitor', label: 'tab_monitor', icon: '📊' },
-  { id: 'effects', label: 'tab_effects', icon: '⚡' },
-  { id: 'hardware', label: 'tab_hardware', icon: '⚙️' },
-  { id: 'protocol', label: 'tab_protocol', icon: '🔌' },
-  { id: 'pins', label: 'tab_pins', icon: '📍' },
-  { id: 'buttons', label: 'tab_buttons', icon: '🔘' },
-  { id: 'inputs', label: 'tab_inputs', icon: '🎮' },
-  { id: 'license', label: 'tab_license', icon: '🔑' },
-  { id: 'tools', label: 'tab_tools', icon: '🛠️' },
-  { id: 'logs', label: 'tab_logs', icon: '📝' },
+  { id: 'monitor', label: 'tabs.monitor', icon: '📊' },
+  { id: 'effects', label: 'tabs.effects', icon: '⚡' },
+  { id: 'hardware', label: 'tabs.hardware', icon: '⚙️' },
+  { id: 'protocol', label: 'tabs.protocol', icon: '🔌' },
+  { id: 'pins', label: 'tabs.pins', icon: '📍' },
+  { id: 'buttons', label: 'tabs.buttons', icon: '🔘' },
+  { id: 'inputs', label: 'tabs.inputs', icon: '🎮' },
+  { id: 'license', label: 'tabs.license', icon: '🔑' },
+  { id: 'tools', label: 'tabs.tools', icon: '🛠️' },
+  { id: 'logs', label: 'tabs.logs', icon: '📝' },
 ];
 
-const tabs = [...mainTabs, { id: 'settings', label: 'tab_settings', icon: '⚙️' }];
+const tabs = [...mainTabs, { id: 'settings', label: 'tabs.settings', icon: '⚙️' }];
 
 const currentTabLabel = computed(() => {
   return tabs.find(t => t.id === currentTab.value)?.label || '';
 });
 
 const statusTextKey = computed(() => {
-  return store.isConnected ? 'status_connected' : 'status_disconnected';
+  return store.isConnected ? 'status.connected' : 'status.disconnected';
 });
 
 const handleReboot = async () => {

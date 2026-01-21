@@ -1,11 +1,11 @@
 <template>
   <section class="status-card">
     <div class="card-header">
-      <h3>{{ $t('status_card_title') }}</h3>
+      <h3>{{ $t('status.card_title') }}</h3>
     </div>
     <div class="metrics-grid">
       <div class="metric">
-        <label>{{ $t('label_torque') }}</label>
+        <label>{{ $t('labels.torque') }}</label>
         <div class="bar-container">
           <div class="bar torque-bar" :style="{ width: Math.abs(torquePercent) + '%' }"></div>
         </div>

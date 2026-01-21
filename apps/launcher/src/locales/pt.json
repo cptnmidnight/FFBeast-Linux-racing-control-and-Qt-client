@@ -98,6 +98,36 @@
         "actions": {
             "save_wheel": "Salvar Configurações",
             "apply_wheel": "Aplicar ao Volante Agora"
+        },
+        "inputs": {
+            "title": "Entradas e Mapeamento"
         }
+    },
+    "btn_edit_mapping": "Editar Mapeamento",
+    "axis_edit_title": "Editar Eixo",
+    "axis_custom_name": "Nome Personalizado",
+    "axis_joystick_mapping": "Mapeamento de Botão (Joystick)",
+    "axis_button_low": "Botão (Low)",
+    "axis_button_high": "Botão (High)",
+    "axis_keyboard_mapping": "Mapeamento de Tecla (Teclado)",
+    "axis_start": "Tecla (Low)",
+    "axis_end": "Tecla (High)",
+    "axis_key_low": "Tecla (Low)",
+    "axis_key_high": "Tecla (High)",
+    "modal_save": "Salvar",
+    "modal_cancel": "Cancelar",
+    "setting_min_help": "Calibração de hardware (em breve)",
+    "option_none": "Nenhum",
+    "axis_mapping_hint": "Define quais teclas ou botões são acionados quando o eixo atinge os extremos.",
+    "axis_names": {
+        "wheel": "Volante",
+        "throttle": "Acelerador",
+        "brake": "Freio",
+        "clutch": "Embreagem",
+        "aux": "Aux"
+    },
+    "axis_labels": {
+        "x_wheel": "Eixo X (Volante)",
+        "generic": "Eixo {n}"
     }
 }

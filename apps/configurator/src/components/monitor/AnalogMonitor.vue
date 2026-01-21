@@ -1,7 +1,7 @@
 <template>
   <section class="inputs-card">
     <div class="card-header">
-      <h3>{{ $t('analog_inputs_title') }}</h3>
+      <h3>{{ $t('labels.analog_inputs') }}</h3>
     </div>
     <div class="analog-grid">
 <div v-for="(val, index) in values" :key="index" class="analog-item" v-show="isVisible(index)">
