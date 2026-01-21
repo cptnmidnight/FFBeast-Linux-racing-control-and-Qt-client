@@ -4,7 +4,7 @@ import GameList from './components/GameList/GameList.vue';
 import HardwareMonitor from './components/HardwareMonitor/HardwareMonitor.vue';
 import WheelConfigModal from './components/WheelConfig/WheelConfigModal.vue';
 import AddGameModal from './components/AddGameModal/AddGameModal.vue';
-import Settings from './views/Settings.vue';
+import SettingsModal from './components/SettingsModal.vue';
 
 export default defineComponent({
   name: 'App',
@@ -13,14 +13,14 @@ export default defineComponent({
     HardwareMonitor,
     WheelConfigModal,
     AddGameModal,
-    Settings
+    SettingsModal
   },
   setup() {
     const showAddModal = ref(false);
     const showConfigModal = ref(false);
+    const showSettingsModal = ref(false);
     const gameListRef = ref<InstanceType<typeof GameList> | null>(null);
     const editingGameId = ref<string | undefined>(undefined);
-    const currentView = ref<'library' | 'settings'>('library');
 
     const onGameSaved = () => {
         // Refresh list
@@ -42,9 +42,9 @@ export default defineComponent({
     return {
         showAddModal,
         showConfigModal,
+        showSettingsModal,
         gameListRef,
         editingGameId,
-        currentView,
         onGameSaved,
         handleEditGame,
         handleCloseModal
@@ -58,22 +58,17 @@ export default defineComponent({
     <header>
       <h1>{{ $t('app.title') }}</h1>
       <nav class="main-nav">
-        <button 
-          :class="{ active: currentView === 'library' }"
-          @click="currentView = 'library'"
-        >
+        <!-- Optional: Could restart library view if needed, but now it's static -->
+        <button class="active">
           📚 Biblioteca
         </button>
-        <button 
-          :class="{ active: currentView === 'settings' }"
-          @click="currentView = 'settings'"
-        >
+        <button @click="showSettingsModal = true">
           ⚙️ Configurações
         </button>
       </nav>
     </header>
     
-    <main v-if="currentView === 'library'">
+    <main>
        <!-- Top Section: Hardware Info and Config -->
        <HardwareMonitor @open-config="showConfigModal = true" />
 
@@ -86,10 +81,6 @@ export default defineComponent({
           <GameList ref="gameListRef" @edit-game="handleEditGame" />
        </section>
     </main>
-
-    <main v-else-if="currentView === 'settings'">
-      <Settings />
-    </main>
     
     <AddGameModal 
         v-if="showAddModal" 
@@ -101,6 +92,12 @@ export default defineComponent({
     <WheelConfigModal
         v-if="showConfigModal"
         @close="showConfigModal = false"
+    />
+
+    <SettingsModal
+        v-if="showSettingsModal"
+        :show="showSettingsModal"
+        @close="showSettingsModal = false"
     />
 
     <footer>

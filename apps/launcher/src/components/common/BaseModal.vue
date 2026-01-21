@@ -7,6 +7,11 @@ export default defineComponent({
     title: {
       type: String,
       default: ''
+    },
+    size: {
+        type: String,
+        default: 'medium', // small, medium, large, full
+        validator: (val: string) => ['small', 'medium', 'large', 'full'].includes(val)
     }
   },
   emits: ['close']
@@ -15,7 +20,7 @@ export default defineComponent({
 
 <template>
   <div class="modal-overlay" @click.self="$emit('close')">
-    <div class="modal-content">
+    <div class="modal-content" :class="size">
       <div class="modal-header">
         <h3 v-if="title">{{ title }}</h3>
         <button class="close-btn" @click="$emit('close')">×</button>
@@ -52,12 +57,25 @@ export default defineComponent({
   border: 1px solid var(--border-color);
   border-radius: 16px;
   width: 90%;
-  max-width: 500px;
+  max-width: 500px; /* default/medium */
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
+}
+
+.modal-content.small {
+    max-width: 400px;
+}
+
+.modal-content.large {
+    max-width: 900px;
+}
+
+.modal-content.full {
+    max-width: 95%;
+    height: 95%;
 }
 
 .modal-header {

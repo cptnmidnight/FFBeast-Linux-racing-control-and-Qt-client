@@ -37,3 +37,21 @@ export interface GamepadAxisMapping {
     axis_rz_inverted: boolean;
     deadzone: number;
 }
+
+export interface KeyMapping {
+    index: number;
+    name: string;
+    key_low: string;
+    key_high: string;
+    btn_low: string;
+    btn_high: string;
+    min: number;
+    max: number;
+    inverted: boolean;
+}
+
+export interface Profile {
+    id: string;
+    name: string;
+    mappings: KeyMapping[];
+}

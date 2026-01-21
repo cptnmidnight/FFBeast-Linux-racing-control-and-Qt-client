@@ -346,6 +346,11 @@ pub fn run() {
             crate::services::keyboard_service::keyboard_service_is_active,
             crate::services::keyboard_service::set_keyboard_mapping,
             crate::services::keyboard_service::get_keyboard_mapping,
+            crate::services::keyboard_service::list_profiles,
+            crate::services::keyboard_service::create_profile,
+            crate::services::keyboard_service::delete_profile,
+            crate::services::keyboard_service::set_active_profile,
+            crate::services::keyboard_service::get_active_profile_id,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

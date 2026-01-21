@@ -71,5 +71,25 @@ export const SettingsService = {
 
     async applyWheelSettingsToHardware(settings: import("../types/settings").DefaultWheelSettings): Promise<void> {
         return await invoke("apply_wheel_settings_to_hardware", { settings });
+    },
+
+    async listProfiles(): Promise<import("../types/settings").Profile[]> {
+        return await invoke("list_profiles");
+    },
+
+    async createProfile(name: string): Promise<string> {
+        return await invoke("create_profile", { name });
+    },
+
+    async deleteProfile(id: string): Promise<void> {
+        return await invoke("delete_profile", { id });
+    },
+
+    async setActiveProfile(id: string): Promise<void> {
+        return await invoke("set_active_profile", { id });
+    },
+
+    async getActiveProfileId(): Promise<string | null> {
+        return await invoke("get_active_profile_id");
     }
 };

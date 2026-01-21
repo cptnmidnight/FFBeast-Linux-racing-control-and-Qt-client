@@ -92,6 +92,23 @@
         "actions": {
             "save_wheel": "Save Settings",
             "apply_wheel": "Apply to Wheel Now"
+        },
+        "inputs": {
+            "title": "Inputs & Mapping"
         }
-    }
+    },
+    "btn_edit_mapping": "Edit Mapping",
+    "axis_edit_title": "Edit Axis",
+    "axis_custom_name": "Custom Name",
+    "axis_joystick_mapping": "Joystick Button Mapping",
+    "axis_button_low": "Button (Low)",
+    "axis_button_high": "Button (High)",
+    "axis_keyboard_mapping": "Keyboard Key Mapping",
+    "axis_start": "Key (Low)",
+    "axis_end": "Key (High)",
+    "axis_key_low": "Key (Low)",
+    "axis_key_high": "Key (High)",
+    "modal_save": "Save",
+    "modal_cancel": "Cancel",
+    "setting_min_help": "Hardware calibration (coming soon)"
 }
