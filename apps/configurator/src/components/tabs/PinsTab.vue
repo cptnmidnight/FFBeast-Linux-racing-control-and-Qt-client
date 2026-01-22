@@ -12,6 +12,7 @@
           :options="modeOptions" 
           class="compact"
           :use-i18n="true"
+          :disabled="!isConnected"
           @update:model-value="v => updatePinMode(index - 1, v)"
         />
       </div>
@@ -25,8 +26,9 @@ import { useHardwareStore } from '../../stores/hardware';
 import BaseSelect from '../common/BaseSelect.vue';
 
 const store = useHardwareStore();
-const pinModes = computed(() => store.gpio?.pin_mode ?? []);
+const pinModes = computed(() => store.gpio?.pin_mode ?? new Array(10).fill(0));
 const pinCount = computed(() => pinModes.value.length);
+const isConnected = computed(() => store.isConnected);
 
 const modeOptions = [
   { label: 'pins.modes.none', value: 0 },
@@ -43,6 +45,8 @@ const modeOptions = [
 ];
 
 const updatePinMode = async (index: number, value: number) => {
+  if (!store.isConnected) return;
+  
   console.log(`[PinsTab] Pin ${index} mode changed to:`, value, `(${modeOptions.find(m => m.value === value)?.label})`);
   
   if (store.gpio) {

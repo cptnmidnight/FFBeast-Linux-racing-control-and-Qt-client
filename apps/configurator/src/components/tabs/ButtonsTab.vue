@@ -12,6 +12,7 @@
           :options="modeOptions" 
           class="compact"
           :use-i18n="true"
+          :disabled="!isConnected"
           @update:model-value="v => updateButtonMode(index - 1, v)"
         />
       </div>
@@ -25,7 +26,8 @@ import { useHardwareStore } from '../../stores/hardware';
 import BaseSelect from '../common/BaseSelect.vue';
 
 const store = useHardwareStore();
-const buttonModes = computed(() => store.gpio?.button_mode ?? []);
+const buttonModes = computed(() => store.gpio?.button_mode ?? new Array(32).fill(0));
+const isConnected = computed(() => store.isConnected);
 
 const modeOptions = [
   { label: 'modes.btn.none', value: 0 },
@@ -35,6 +37,8 @@ const modeOptions = [
 ];
 
 const updateButtonMode = async (index: number, value: number) => {
+  if (!store.isConnected) return;
+
   console.log(`[ButtonsTab] Button ${index + 1} mode changed to:`, value, `(${modeOptions.find(m => m.value === value)?.label})`);
   
   if (store.gpio) {

@@ -242,14 +242,22 @@
         }
     },
     "axis": {
-        "edit_title": "Editar Mapeamento do Eixo",
+        "edit_title": "Editar Mapeamento: ",
         "custom_name": "Nome Personalizado",
         "joystick_mapping": "Mapeamento de Joystick",
         "keyboard_mapping": "Mapeamento de Teclado",
         "button_low": "Botão Baixo (0%)",
         "button_high": "Botão Alto (100%)",
         "key_low": "Tecla Baixa",
-        "key_high": "Tecla Alta"
+        "key_high": "Tecla Alta",
+        "names": {
+            "rotation_x": "Rotação X",
+            "rotation_y": "Rotação Y",
+            "rotation_z": "Rotação Z",
+            "slider": "Slider",
+            "dial": "Dial",
+            "aux": "Aux"
+        }
     },
     "modals": {
         "cancel": "Cancelar",

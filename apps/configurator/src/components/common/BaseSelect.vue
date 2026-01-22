@@ -2,7 +2,7 @@
   <div class="base-select">
     <label v-if="label">{{ label }}</label>
     <div class="select-wrapper">
-      <select :value="modelValue" @change="updateValue" class="select-input">
+      <select :value="modelValue" @change="updateValue" class="select-input" :disabled="disabled">
         <option v-for="opt in options" :key="opt.value ?? 'null'" :value="opt.value">
           {{ useI18n ? $t(opt.label) : opt.label }}
         </option>
@@ -23,6 +23,7 @@ defineProps<{
   options: Option[];
   label?: string;
   useI18n?: boolean;
+  disabled?: boolean;
 }>();
 
 const emit = defineEmits(['update:modelValue']);
@@ -97,6 +98,16 @@ label {
   font-size: 0.6rem;
   color: var(--text-dim);
   pointer-events: none;
+}
+
+.select-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.select-input:disabled:hover {
+  border-color: var(--border);
 }
 
 option {

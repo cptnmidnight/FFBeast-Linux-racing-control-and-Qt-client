@@ -14,6 +14,13 @@
     
     <div class="dual-threshold-slider__container">
       <div class="dual-threshold-slider__track">
+        <!-- Hardware Axis Value Bar -->
+        <div 
+          v-if="rawValue !== undefined"
+          class="dual-threshold-slider__axis-bar"
+          :style="axisBarStyle"
+        ></div>
+
         <!-- Active range visualization -->
         <div
           class="dual-threshold-slider__range"
@@ -25,7 +32,7 @@
           type="range"
           :value="lowValue"
           :min="min"
-          :max="highValue - step"
+          :max="inputLowMax"
           :step="step"
           :disabled="disabled"
           class="dual-threshold-slider__input dual-threshold-slider__input--low"
@@ -36,7 +43,7 @@
         <input
           type="range"
           :value="highValue"
-          :min="lowValue + step"
+          :min="inputHighMin"
           :max="max"
           :step="step"
           :disabled="disabled"
@@ -65,6 +72,9 @@ interface Props {
   step?: number;
   label?: string;
   disabled?: boolean;
+  rawValue?: number;
+  maxLow?: number;
+  minHigh?: number;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -73,6 +83,9 @@ const props = withDefaults(defineProps<Props>(), {
   step: 1,
   label: '',
   disabled: false,
+  rawValue: undefined,
+  maxLow: undefined,
+  minHigh: undefined,
 });
 
 const emit = defineEmits<{
@@ -93,10 +106,43 @@ const rangeStyle = computed(() => {
   };
 });
 
+const axisBarStyle = computed(() => {
+  if (props.rawValue === undefined) return {};
+  const range = props.max - props.min;
+  const val = Math.max(props.min, Math.min(props.max, props.rawValue));
+  const percent = ((val - props.min) / range) * 100;
+  
+  return {
+    width: `${percent}%`
+  };
+});
+
+// Computed strict limits for inputs
+const inputLowMax = computed(() => {
+  const collisionArg = props.highValue - props.step;
+  if (props.maxLow !== undefined) {
+    return Math.min(props.maxLow, collisionArg);
+  }
+  return collisionArg;
+});
+
+const inputHighMin = computed(() => {
+  const collisionArg = props.lowValue + props.step;
+  if (props.minHigh !== undefined) {
+    return Math.max(props.minHigh, collisionArg);
+  }
+  return collisionArg;
+});
+
 function handleLowInput(event: Event) {
   const target = event.target as HTMLInputElement;
-  const value = Number(target.value);
+  let value = Number(target.value);
   
+  // Enforce maxLow if present
+  if (props.maxLow !== undefined && value > props.maxLow) {
+    value = props.maxLow;
+  }
+
   // Ensure low value doesn't exceed high value
   if (value < props.highValue) {
     emit('update:lowValue', value);
@@ -105,8 +151,13 @@ function handleLowInput(event: Event) {
 
 function handleHighInput(event: Event) {
   const target = event.target as HTMLInputElement;
-  const value = Number(target.value);
+  let value = Number(target.value);
   
+  // Enforce minHigh if present
+  if (props.minHigh !== undefined && value < props.minHigh) {
+    value = props.minHigh;
+  }
+
   // Ensure high value doesn't go below low value
   if (value > props.lowValue) {
     emit('update:highValue', value);
@@ -132,7 +183,7 @@ function handleHighInput(event: Event) {
 .dual-threshold-slider__label {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-main);
 }
 
 .dual-threshold-slider__values {
@@ -147,34 +198,41 @@ function handleHighInput(event: Event) {
 }
 
 .dual-threshold-slider__value--low {
-  color: var(--status-warning);
+  color: var(--warning);
 }
 
 .dual-threshold-slider__value--high {
-  color: var(--status-success);
+  color: var(--success);
 }
 
 .dual-threshold-slider__container {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0 10px;
 }
 
 .dual-threshold-slider__track {
   position: relative;
   height: 40px;
   width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
 }
 
 .dual-threshold-slider__range {
   position: absolute;
   top: 50%;
+  left: 0;
   transform: translateY(-50%);
   height: 6px;
   background: linear-gradient(
     90deg,
-    var(--status-warning),
-    var(--status-success)
+    var(--warning),
+    var(--success)
   );
   border-radius: 3px;
   pointer-events: none;
@@ -183,7 +241,12 @@ function handleHighInput(event: Event) {
 
 .dual-threshold-slider__input {
   position: absolute;
+  left: 0;
   width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
   height: 6px;
   top: 50%;
   transform: translateY(-50%);
@@ -192,7 +255,9 @@ function handleHighInput(event: Event) {
   -webkit-appearance: none;
   appearance: none;
   pointer-events: none;
+  z-index: 2;
 }
+
 
 .dual-threshold-slider__input::-webkit-slider-track {
   background: transparent;
@@ -214,7 +279,7 @@ function handleHighInput(event: Event) {
   pointer-events: auto;
   transition: all 0.2s ease;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  border: 3px solid var(--bg-primary);
+  border: 3px solid var(--bg-card);
   z-index: 2;
 }
 
@@ -224,7 +289,7 @@ function handleHighInput(event: Event) {
   border-radius: 50%;
   cursor: pointer;
   pointer-events: auto;
-  border: 3px solid var(--bg-primary);
+  border: 3px solid var(--bg-card);
   transition: all 0.2s ease;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   z-index: 2;
@@ -270,7 +335,28 @@ function handleHighInput(event: Event) {
 
 .dual-threshold-slider__tick {
   font-size: 11px;
-  color: var(--text-tertiary);
+  color: var(--text-dim);
   font-family: 'JetBrains Mono', monospace;
+}
+
+.dual-threshold-slider__axis-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.15); /* More visible */
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 0;
+  transition: width 0.05s linear;
+}
+
+.dual-threshold-slider__range {
+  z-index: 1;
+}
+
+.dual-threshold-slider__input {
+  z-index: 2;
 }
 </style>

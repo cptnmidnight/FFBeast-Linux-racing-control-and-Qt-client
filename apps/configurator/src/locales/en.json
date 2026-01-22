@@ -242,14 +242,22 @@
         }
     },
     "axis": {
-        "edit_title": "Edit Axis Mapping",
+        "edit_title": "Edit Mapping: ",
         "custom_name": "Custom Name",
         "joystick_mapping": "Joystick Mapping",
         "keyboard_mapping": "Keyboard Mapping",
         "button_low": "Button Low (0%)",
         "button_high": "Button High (100%)",
         "key_low": "Key Low",
-        "key_high": "Key High"
+        "key_high": "Key High",
+        "names": {
+            "rotation_x": "Rotation X",
+            "rotation_y": "Rotation Y",
+            "rotation_z": "Rotation Z",
+            "slider": "Slider",
+            "dial": "Dial",
+            "aux": "Aux"
+        }
     },
     "modals": {
         "cancel": "Cancel",

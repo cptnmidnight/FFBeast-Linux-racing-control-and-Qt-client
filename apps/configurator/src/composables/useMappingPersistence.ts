@@ -4,7 +4,7 @@ import type { AxisMapping } from '../models/AxisMapping';
 const NAMES_KEY = 'ffbeast_axis.names';
 const MAPPINGS_KEY = 'ffbeast_axis.mappings';
 
-export const DEFAULT_NAMES = ["Throttle", "Brake", "Clutch", "Aux 4", "Aux 5", "Aux 6", "Aux 7", "Aux 8"];
+export const DEFAULT_NAMES = ["", "", "", "", "", "", "", ""];
 
 export function useMappingPersistence() {
     const axisNames = ref<string[]>([]);

@@ -3,7 +3,7 @@
     <div class="mapping-modal">
       <div class="modal-header">
         <h3 class="modal-title">
-          {{ $t('axis.edit_title') }} <span class="highlight">{{ axisIndex !== null ? (axisIndex + 1) : '' }}</span>
+          {{ $t('axis.edit_title') }} <span class="highlight">{{ axisName }}</span>
         </h3>
         <button class="close-btn" @click="close">×</button>
       </div>
@@ -13,22 +13,10 @@
         <div class="form-group">
           <ThemedInput
             v-model="localName"
-            :placeholder="$t('axis.custom_name')"
             :label="$t('axis.custom_name')"
           />
         </div>
-
-        <!-- Visualizer -->
-        <AxisMonitor
-          :value="axisValue"
-          :min="0"
-          :max="32767"
-          orientation="horizontal"
-          :markers="markers"
-          :show-value="true"
-          class="preview-monitor"
-        />
-
+        
         <div class="mapping-section">
           <div class="section-divider">{{ $t('axis.joystick_mapping') }}</div>
           <div class="form-row">
@@ -50,14 +38,17 @@
         <div class="mapping-section">
           <div class="section-divider">{{ $t('axis.keyboard_mapping') }}</div>
           
-          <!-- Deadzone/Threshold Sliders -->
+              <!-- Deadzone/Threshold Sliders -->
           <div class="deadzone-config">
             <DualThresholdSlider
               v-model:lowValue="config.thresholdLow"
               v-model:highValue="config.thresholdHigh"
               :min="0"
               :max="32767"
+              :max-low="13106"
+              :min-high="19660"
               :label="$t('settings.deadzone') || 'Thresholds'"
+              :raw-value="liveValue"
             />
           </div>
 
@@ -91,8 +82,8 @@ import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import ThemedInput from '../shared/atoms/ThemedInput.vue';
 import ThemedSelect, { type SelectOption } from '../shared/atoms/ThemedSelect.vue';
-import AxisMonitor, { type AxisMarker } from '../shared/molecules/AxisMonitor.vue';
 import DualThresholdSlider from '../shared/molecules/DualThresholdSlider.vue';
+import { useHardwareStream } from '../../composables/useHardwareStream';
 
 export interface MappingConfig {
   keyLow: string;
@@ -107,7 +98,7 @@ interface Props {
   show: boolean;
   axisIndex: number | null;
   axisName: string;
-  axisValue: number;
+  axisValue: number; // Initial value
   initialConfig: MappingConfig;
 }
 
@@ -119,6 +110,19 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const { status: hardwareStream } = useHardwareStream();
+
+// Real-time value from stream, fallback to prop
+const liveValue = computed(() => {
+  if (props.axisIndex !== null && hardwareStream.value?.adc) {
+    // Map logical axis (0, 1, 2) to hardware analogs (3, 4, 5)
+    // Hardware often sends 12-bit (0-4095). We need to scale this to 16-bit (0-32767)
+    // 4095 * 8 ~= 32760
+    const raw = hardwareStream.value.adc[props.axisIndex + 3] ?? 0;
+    return Math.min(32767, raw * 8);
+  }
+  return props.axisValue;
+});
 
 // Local state
 const localName = ref('');
@@ -156,27 +160,6 @@ watch(() => props.show, (newVal) => {
   }
 }, { immediate: true });
 
-const markers = computed<AxisMarker[]>(() => {
-  const m: AxisMarker[] = [];
-  
-  if (config.value.thresholdLow !== undefined) {
-    m.push({
-      position: (config.value.thresholdLow / 32767) * 100,
-      label: 'LOW',
-      color: '#ff4444'
-    });
-  }
-  
-  if (config.value.thresholdHigh !== undefined) {
-    m.push({
-      position: (config.value.thresholdHigh / 32767) * 100,
-      label: 'HIGH',
-      color: '#44ff44'
-    });
-  }
-  
-  return m;
-});
 
 // Options generation
 const buttonOptions = computed(() => {
@@ -232,10 +215,10 @@ function save() {
 
 .mapping-modal {
   background: var(--bg-card);
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border);
   border-radius: 12px;
   width: 100%;
-  max-width: 500px;
+  max-width: 800px;
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
@@ -245,7 +228,7 @@ function save() {
 
 .modal-header {
   padding: 16px 20px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -255,17 +238,17 @@ function save() {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-main);
 }
 
 .highlight {
-  color: var(--accent-primary);
+  color: var(--accent);
 }
 
 .close-btn {
   background: none;
   border: none;
-  color: var(--text-tertiary);
+  color: var(--text-dim);
   font-size: 24px;
   cursor: pointer;
   line-height: 1;
@@ -274,7 +257,7 @@ function save() {
 }
 
 .close-btn:hover {
-  color: var(--text-primary);
+  color: var(--text-main);
 }
 
 .modal-content {
@@ -294,8 +277,8 @@ function save() {
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
-  color: var(--accent-primary);
-  border-bottom: 1px solid rgba(var(--accent-primary-rgb), 0.3);
+  color: var(--accent);
+  border-bottom: 1px solid var(--accent-muted);
   padding-bottom: 4px;
   margin-bottom: 12px;
 }
@@ -312,7 +295,7 @@ function save() {
 
 .modal-footer {
   padding: 16px 20px;
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
   gap: 12px;
@@ -321,7 +304,7 @@ function save() {
 
 .btn-primary, .btn-outline {
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-family: 'Outfit', sans-serif;
   font-weight: 600;
   font-size: 14px;
@@ -330,24 +313,24 @@ function save() {
 }
 
 .btn-primary {
-  background: var(--accent-primary);
+  background: var(--accent);
   color: #000;
   border: none;
 }
 
 .btn-primary:hover {
-  background: var(--accent-secondary);
+  background: var(--accent-muted);
   transform: translateY(-1px);
 }
 
 .btn-outline {
   background: transparent;
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
 }
 
 .btn-outline:hover {
-  border-color: var(--text-primary);
-  color: var(--text-primary);
+  border-color: var(--text-main);
+  color: var(--text-main);
 }
 </style>

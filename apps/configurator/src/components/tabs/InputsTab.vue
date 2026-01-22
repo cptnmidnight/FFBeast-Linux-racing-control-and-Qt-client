@@ -8,7 +8,7 @@
         :label="getAxisLabel(index)"
         v-model="axisNames[index]"
         :raw-value="getAxisValue(index)"
-        :default-name="DEFAULT_NAMES[index]"
+        :default-name="getDefaultName(index)"
         @edit="startEditing(index)"
         @save-name="saveAxisName"
       />
@@ -19,7 +19,7 @@
       v-if="editingIdx !== null"
       :show="showModal"
       :axis-index="editingIdx"
-      :axis-name="axisNames[editingIdx] || DEFAULT_NAMES[editingIdx]"
+      :axis-name="axisNames[editingIdx] || getDefaultName(editingIdx)"
       :axis-value="getAxisValue(editingIdx)"
       :initial-config="getCurrentMappingConfig(editingIdx)"
       @close="closeModal"
@@ -30,14 +30,16 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useHardwareStore } from '../../stores/hardware';
 import { useHardwareStream } from '../../composables/useHardwareStream';
 import AxisMappingRow from '../widgets/AxisMappingRow.vue';
 import MappingEditModal, { type MappingConfig } from '../widgets/MappingEditModal.vue';
 import type { KeyMapping } from '../../models/KeyMapping';
-import { useMappingPersistence, DEFAULT_NAMES } from '../../composables/useMappingPersistence';
+import { useMappingPersistence } from '../../composables/useMappingPersistence';
 
 const store = useHardwareStore();
+const { t } = useI18n();
 const { status: hardwareStatus } = useHardwareStream();
 
 // State
@@ -56,8 +58,20 @@ const activeIndices = computed(() => {
 
 // Implementation
 const getAxisLabel = (index: number) => {
-  if (index < 3) return `AXIS ${['X', 'Y', 'Z'][index]}`;
+  if (index < 3) return `R${['x', 'y', 'z'][index]}`;
   return `GPIO ${index}`;
+};
+
+const getDefaultName = (index: number) => {
+  switch(index) {
+    case 0: return t('axis.names.rotation_x');
+    case 1: return t('axis.names.rotation_y');
+    case 2: return t('axis.names.rotation_z');
+    case 3: return t('axis.names.slider');
+    case 4: return t('axis.names.dial');
+    default: return `${t('axis.names.aux')} ${index - 4}`; // Aux starts at Aux 1 for index 5? No, index 5 is Aux 1 if 0-4 are taken.
+    // Previous Default was: X, Y, Z, Slider, Dial, Aux 1 (idx 5), Aux 2 (idx 6), Aux 3 (idx 7)
+  }
 };
 
 const getAxisValue = (index: number) => {
@@ -70,9 +84,9 @@ const getCurrentMappingConfig = (index: number): MappingConfig => {
   // Assuming 'm' has the compatible structure, otherwise defaults.
   return {
     keyLow: m?.keyLow || '',
-    thresholdLow: m?.thresholdLow ?? 2000,
+    thresholdLow: m?.thresholdLow ?? 100,
     keyHigh: m?.keyHigh || '',
-    thresholdHigh: m?.thresholdHigh ?? 30000,
+    thresholdHigh: m?.thresholdHigh ?? 4000,
     btnLow: m?.btnLow ?? null,
     btnHigh: m?.btnHigh ?? null
   };
