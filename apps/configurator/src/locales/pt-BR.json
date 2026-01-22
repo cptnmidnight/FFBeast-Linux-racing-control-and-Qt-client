@@ -106,7 +106,6 @@
             "margin": "Margem do Toast (px)"
         },
         "build_date": "Data de Build",
-        "platform": "Plataforma",
         "mech_config": "Config. Mecânica",
         "calibration": "Calibração",
         "axis_x": "Eixo X",
@@ -234,6 +233,8 @@
     },
     "app": {
         "info": "Informações do App",
+        "developer": "Desenvolvedor",
+        "contact": "Contato",
         "links": {
             "github": "Repositório Github",
             "docs": "Documentação"
@@ -363,6 +364,10 @@
         "service_toggle_failed": "Falha ao alternar serviço",
         "test_notification": "Esta é uma notificação de teste! 🎉",
         "id_copied": "ID copiado para a área de transferência"
+    },
+    "dialogs": {
+        "enter_dfu_confirm": "Tem certeza que deseja entrar em modo DFU? Isso é usado para atualizações de firmware.",
+        "factory_reset_confirm": "Tem certeza que deseja restaurar as configurações de fábrica? Todas as alterações serão perdidas."
     },
     "general": {
         "low": "Baixo",

@@ -101,14 +101,20 @@
             <span class="info-item__value">2026-01-21</span>
           </div>
           <div class="info-item">
-            <span class="info-item__label">{{ $t('settings.platform') }}</span>
-            <span class="info-item__value">SODevs Hardware (Tauri)</span>
+            <span class="info-item__label">{{ $t('settings.build_date') }}</span>
+            <span class="info-item__value">2026-01-21</span>
           </div>
         </div>
         <template #footer>
-          <div class="footer-links">
-            <a href="https://github.com/osnipezzini/SODevsGameLauncher" target="_blank">{{ $t('app.links.github') }}</a>
-            <a href="https://sodevs.com.br" target="_blank">{{ $t('app.links.docs') }}</a>
+          <div class="info-list">
+            <div class="info-item">
+              <span class="info-item__label">{{ $t('app.developer') }}</span>
+              <span class="info-item__value">Osni Pezzini Junior</span>
+            </div>
+            <div class="info-item">
+              <span class="info-item__label">{{ $t('app.contact') }}</span>
+              <span class="info-item__value">osnipezzini@gmail.com</span>
+            </div>
           </div>
         </template>
       </BaseCard>
@@ -288,22 +294,7 @@ const testToast = () => {
   font-weight: 500;
 }
 
-.footer-links {
-  display: flex;
-  gap: 20px;
-}
 
-.footer-links a {
-  color: var(--accent-primary);
-  font-size: 13px;
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.footer-links a:hover {
-  color: var(--text-main);
-  text-decoration: underline;
-}
 
 .btn-test {
   margin-top: 16px;

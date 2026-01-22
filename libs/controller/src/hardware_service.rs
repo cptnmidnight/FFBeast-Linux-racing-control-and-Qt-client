@@ -668,7 +668,8 @@ impl WheelInterface for HardwareService {
             .ok_or_else(|| anyhow!("Device not connected"))?;
 
         let mut buf = [0u8; 65];
-        buf[0] = 0x32; // REPORT_SWITCH_TO_DFU
+        buf[0] = 0xA3; // Report ID
+        buf[1] = 0x03; // DATA_COMMAND_DFU_MODE
 
         dev.write(&buf)
             .map_err(|e| anyhow!("Failed to switch to DFU mode: {}", e))?;
