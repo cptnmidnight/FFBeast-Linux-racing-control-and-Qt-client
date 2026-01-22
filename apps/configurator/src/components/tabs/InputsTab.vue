@@ -84,11 +84,9 @@ const getCurrentMappingConfig = (index: number): MappingConfig => {
   // Assuming 'm' has the compatible structure, otherwise defaults.
   return {
     keyLow: m?.keyLow || '',
-    thresholdLow: m?.thresholdLow ?? 100,
+    thresholdLow: m?.thresholdLow ?? 2000,
     keyHigh: m?.keyHigh || '',
-    thresholdHigh: m?.thresholdHigh ?? 4000,
-    btnLow: m?.btnLow ?? null,
-    btnHigh: m?.btnHigh ?? null
+    thresholdHigh: m?.thresholdHigh ?? 30000
   };
 };
 

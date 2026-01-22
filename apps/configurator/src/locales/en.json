@@ -257,6 +257,19 @@
             "slider": "Slider",
             "dial": "Dial",
             "aux": "Aux"
+        },
+        "keys": {
+            "space": "Space",
+            "enter": "Enter",
+            "tab": "Tab",
+            "shift": "Shift",
+            "ctrl": "Ctrl",
+            "alt": "Alt",
+            "esc": "Esc",
+            "up": "Up",
+            "down": "Down",
+            "left": "Left",
+            "right": "Right"
         }
     },
     "modals": {

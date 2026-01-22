@@ -5,8 +5,6 @@ export interface AxisMapping {
     invert: boolean;
     keyLow: string;
     keyHigh: string;
-    btnLow: number | null;
-    btnHigh: number | null;
     thresholdLow?: number;
     thresholdHigh?: number;
 }

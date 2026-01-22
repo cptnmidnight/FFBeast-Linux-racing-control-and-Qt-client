@@ -83,16 +83,16 @@ function handleChange(event: Event) {
 .themed-select__label {
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-main);
 }
 
 .themed-select__input {
   width: 100%;
   padding: 8px 32px 8px 12px;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border);
   border-radius: 6px;
-  color: var(--text-primary);
+  color: var(--text-main);
   font-family: 'Outfit', sans-serif;
   font-size: 14px;
   cursor: pointer;
@@ -107,12 +107,12 @@ function handleChange(event: Event) {
 }
 
 .themed-select__input:hover:not(:disabled) {
-  border-color: var(--accent-primary);
+  border-color: var(--accent);
 }
 
 .themed-select__input:focus {
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 0 3px rgba(var(--accent-primary-rgb), 0.1);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
 }
 
 .themed-select__input--disabled {
@@ -121,8 +121,8 @@ function handleChange(event: Event) {
 }
 
 .themed-select__input option {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+  background: var(--bg-sidebar);
+  color: var(--text-main);
   padding: 8px;
 }
 </style>

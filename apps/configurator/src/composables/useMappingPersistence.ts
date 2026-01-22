@@ -29,8 +29,6 @@ export function useMappingPersistence() {
                 invert: false,
                 keyLow: '',
                 keyHigh: '',
-                btnLow: null,
-                btnHigh: null,
                 thresholdLow: 2000,
                 thresholdHigh: 30000
             }));

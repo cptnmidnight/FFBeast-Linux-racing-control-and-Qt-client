@@ -18,24 +18,6 @@
         </div>
         
         <div class="mapping-section">
-          <div class="section-divider">{{ $t('axis.joystick_mapping') }}</div>
-          <div class="form-row">
-            <ThemedSelect
-              v-model="btnLowProxy"
-              :options="buttonOptions"
-              :label="$t('axis.button_low')"
-              :placeholder="$t('options.none')"
-            />
-            <ThemedSelect
-              v-model="btnHighProxy"
-              :options="buttonOptions"
-              :label="$t('axis.button_high')"
-              :placeholder="$t('options.none')"
-            />
-          </div>
-        </div>
-
-        <div class="mapping-section">
           <div class="section-divider">{{ $t('axis.keyboard_mapping') }}</div>
           
               <!-- Deadzone/Threshold Sliders -->
@@ -57,13 +39,11 @@
               v-model="config.keyLow"
               :options="keyOptions"
               :label="$t('axis.key_low')"
-              :placeholder="$t('options.none')"
             />
             <ThemedSelect
               v-model="config.keyHigh"
               :options="keyOptions"
               :label="$t('axis.key_high')"
-              :placeholder="$t('options.none')"
             />
           </div>
         </div>
@@ -90,8 +70,6 @@ export interface MappingConfig {
   thresholdLow: number;
   keyHigh: string;
   thresholdHigh: number;
-  btnLow: number | null;
-  btnHigh: number | null;
 }
 
 interface Props {
@@ -131,25 +109,6 @@ const config = ref<MappingConfig>({
   thresholdLow: 2000,
   keyHigh: '',
   thresholdHigh: 30000,
-  btnLow: null,
-  btnHigh: null,
-});
-
-// Proxies for ThemedSelect (which doesn't accept null)
-const btnLowProxy = computed({
-  get: () => config.value.btnLow ?? -1,
-  set: (val: string | number) => {
-    const num = Number(val);
-    config.value.btnLow = num < 0 ? null : num;
-  }
-});
-
-const btnHighProxy = computed({
-  get: () => config.value.btnHigh ?? -1,
-  set: (val: string | number) => {
-    const num = Number(val);
-    config.value.btnHigh = num < 0 ? null : num;
-  }
 });
 
 // Watch triggers to sync props to local state
@@ -161,24 +120,15 @@ watch(() => props.show, (newVal) => {
 }, { immediate: true });
 
 
-// Options generation
-const buttonOptions = computed(() => {
-  const opts: SelectOption[] = [{ label: t('options.none'), value: -1 }]; // Using -1 or null properly
-  // Note: ThemedSelect handles value matching.
-  // Ideally use null for 'none', but Select value prop might default to string.
-  
-  for (let i = 0; i < 32; i++) {
-    opts.push({ label: `${t('buttons.label')} ${i + 1}`, value: i });
-  }
-  return opts;
-});
-
 const KEY_LIST = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "Up", "Down", "Left", "Right", "Space", "Enter", "Tab", "Shift", "Ctrl", "Alt", "Esc"];
 
 const keyOptions = computed(() => {
   const opts: SelectOption[] = [{ label: t('options.none'), value: '' }];
   KEY_LIST.forEach(k => {
-    opts.push({ label: k, value: k });
+    // Check if translation exists, otherwise use the key name
+    const translationKey = `keys.${k.toLowerCase()}`;
+    const keyLabel = t(translationKey) !== translationKey ? t(translationKey) : k;
+    opts.push({ label: keyLabel, value: k });
   });
   return opts;
 });
@@ -188,12 +138,7 @@ function close() {
 }
 
 function save() {
-  // Normalize button values (convert -1 back to null if needed, though simpler to keep checks consistent)
-  const finalConfig = { ...config.value };
-  if (Number(finalConfig.btnLow) < 0) finalConfig.btnLow = null;
-  if (Number(finalConfig.btnHigh) < 0) finalConfig.btnHigh = null;
-  
-  emit('save', localName.value, finalConfig);
+  emit('save', localName.value, { ...config.value });
 }
 </script>
 
