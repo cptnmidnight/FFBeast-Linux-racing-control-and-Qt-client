@@ -1,131 +1,128 @@
 <template>
   <div class="hardware-tab">
     <div class="grid-layout">
-      <!-- Motor Limits -->
+      <!-- Motor & Power Limits -->
       <BaseCard :title="$t('groups.motor')">
-        <BaseSwitch 
+        <ThemedSwitch 
           v-model="ffbEnabled" 
           :label="$t('labels.ffb_active')" 
-          :help="$t('help.force_enabled')"
-          @update:model-value="toggleFFB"
+          @change="toggleFFB"
         />
-        <BaseSlider 
+        <ThemedSlider 
           v-model="hardware.power_limit" 
           :label="$t('settings.power_limit')" 
-          :help="$t('help.power_limit')"
-          suffix="%"
+          value-suffix="%"
+          help-key="help.power_limit"
           @update:model-value="saveHardware"
         />
-        <BaseSlider 
+        <ThemedSlider 
           v-model="hardware.braking_limit" 
           :label="$t('settings.braking_limit')" 
-          :help="$t('help.braking_limit')"
-          suffix="%"
+          value-suffix="%"
+          help-key="help.braking_limit"
           @update:model-value="saveHardware"
         />
-        <BaseSlider 
+        <ThemedSlider 
           v-model="hardware.amplifier_gain" 
           :label="$t('settings.amplifier_gain')" 
-          :help="$t('help.amplifier_gain')"
-          suffix="%"
+          value-suffix="%"
           :max="500" 
+          help-key="help.amplifier_gain"
           @update:model-value="saveHardware"
         />
       </BaseCard>
 
-      <!-- Advanced Motor Config -->
+      <!-- Precision & Filtering -->
       <BaseCard :title="$t('settings.advanced')">
-        <BaseSlider 
+        <ThemedSlider 
           v-model="hardware.encoder_cpr" 
           :label="$t('settings.encoder_cpr')" 
-          :help="$t('help.encoder_cpr')"
           :min="1" 
           :max="65535" 
           @update:model-value="saveHardware"
         />
-        <BaseSlider 
+        <ThemedSlider 
           v-model="hardware.speed_buffer_size" 
           :label="$t('settings.speed_buffer')" 
-          :help="$t('help.speed_buffer')"
           :min="1" 
           :max="255" 
           @update:model-value="saveHardware"
         />
-        <BaseSlider 
+        <ThemedSlider 
           v-model="hardware.position_smoothing" 
           :label="$t('settings.pos_smoothing')" 
-          :help="$t('help.position_smoothing')"
-          suffix="%"
+          value-suffix="%"
           :max="255"
+          help-key="help.position_smoothing"
           @update:model-value="saveHardware"
         />
       </BaseCard>
 
-      <!-- Mechanical Config -->
+      <!-- Mechanical Parameters -->
       <BaseCard :title="$t('settings.mech_config')">
-        <BaseSlider 
+        <ThemedSlider 
           v-model="hardware.pole_pairs" 
           :label="$t('settings.pole_pairs')" 
-          :help="$t('help.pole_pairs')"
           :min="1" 
           :max="50" 
+          help-key="help.pole_pairs"
           @update:model-value="saveHardware"
         />
         <div class="switch-group">
-          <BaseSwitch 
+          <ThemedSwitch 
             v-model="encoderDir" 
             :label="$t('settings.encoder_dir')" 
-            :help="$t('help.encoder_direction')"
-            @update:model-value="handleSwitches"
+            help-key="help.encoder_direction"
+            @change="handleSwitches"
           />
-          <BaseSwitch 
+          <ThemedSwitch 
             v-model="forceDir" 
             :label="$t('settings.force_dir')" 
-            :help="$t('help.force_direction')"
-            @update:model-value="handleSwitches"
+            help-key="help.force_direction"
+            @change="handleSwitches"
           />
-          <BaseSwitch 
+          <ThemedSwitch 
             v-model="debugTorque" 
             :label="$t('settings.debug_torque')" 
-            :help="$t('help.debug_torque')"
-            @update:model-value="handleSwitches"
+            help-key="help.debug_torque"
+            @change="handleSwitches"
           />
         </div>
       </BaseCard>
 
-      <!-- Calibration -->
+      <!-- Calibration Parameters -->
       <BaseCard :title="$t('settings.calibration')">
-        <BaseSlider 
+        <ThemedSlider 
           v-model="hardware.calibration_speed" 
           :label="$t('settings.calibration_speed')" 
-          :help="$t('help.calibration_speed')"
-          suffix="%"
+          value-suffix="%"
+          help-key="help.calibration_speed"
           @update:model-value="saveHardware"
         />
-        <BaseSlider 
+        <ThemedSlider 
           v-model="hardware.calibration_magnitude" 
           :label="$t('settings.calibration_magnitude')" 
-          :help="$t('help.calibration_magnitude')"
-          suffix="%"
+          value-suffix="%"
+          help-key="help.calibration_magnitude"
           @update:model-value="saveHardware"
         />
       </BaseCard>
 
-      <!-- PID Controller -->
+      <!-- PID Controller Theory -->
       <BaseCard :title="$t('groups.pid')">
         <p class="description">{{ $t('groups.pid_desc') }}</p>
-        <BaseSlider 
+        <ThemedSlider 
           v-model="hardware.proportional_gain" 
           :label="$t('settings.p_gain')" 
-          :help="$t('help.proportional_gain')"
           :max="2000" 
+          help-key="help.proportional_gain"
           @update:model-value="saveHardware"
         />
-        <BaseSlider 
+        <ThemedSlider 
           v-model="hardware.integral_gain" 
           :label="$t('settings.i_gain')" 
-          :help="$t('help.integral_gain')"
           :max="1000" 
+          help-key="help.integral_gain"
           @update:model-value="saveHardware"
         />
       </BaseCard>
@@ -133,12 +130,13 @@
   </div>
 </template>
 
+
 <script setup lang="ts">
 import { ref, reactive, watch, onMounted } from 'vue';
 import { useHardwareStore } from '../../stores/hardware';
 import BaseCard from '../common/BaseCard.vue';
-import BaseSlider from '../common/BaseSlider.vue';
-import BaseSwitch from '../common/BaseSwitch.vue';
+import ThemedSlider from '@shared/components/atoms/ThemedSlider.vue';
+import ThemedSwitch from '@shared/components/atoms/ThemedSwitch.vue';
 
 const store = useHardwareStore();
 

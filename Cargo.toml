@@ -3,5 +3,5 @@ resolver = "2"
 members = [
     "apps/launcher/src-tauri",
     "libs/controller",
-    "apps/configurator/src-tauri",
+    "apps/configurator/src-tauri", "libs/input_manager",
 ]

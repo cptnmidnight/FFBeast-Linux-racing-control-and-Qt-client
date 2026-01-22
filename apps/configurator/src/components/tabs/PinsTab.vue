@@ -2,18 +2,16 @@
   <div class="pins-tab">
     <div class="pins-grid">
       <div 
-        v-for="index in pinCount" 
+        v-for="(mode, index) in pinModes" 
         :key="index" 
         class="pin-card"
       >
-        <span class="pin-label">{{ $t('labels.pin') }} {{ index - 1 }}</span>
-        <BaseSelect 
-          :model-value="pinModes[index - 1]" 
-          :options="modeOptions" 
-          class="compact"
-          :use-i18n="true"
+        <span class="pin-label">{{ $t('labels.pin') }} {{ index }}</span>
+        <ThemedSelect 
+          :model-value="mode" 
+          :options="translatedModeOptions" 
           :disabled="!isConnected"
-          @update:model-value="v => updatePinMode(index - 1, v)"
+          @change="(v: number) => updatePinMode(index, v)"
         />
       </div>
     </div>
@@ -22,12 +20,14 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useHardwareStore } from '../../stores/hardware';
-import BaseSelect from '../common/BaseSelect.vue';
+import ThemedSelect from '@shared/components/atoms/ThemedSelect.vue';
 
 const store = useHardwareStore();
+const { t } = useI18n();
+
 const pinModes = computed(() => store.gpio?.pin_mode ?? new Array(10).fill(0));
-const pinCount = computed(() => pinModes.value.length);
 const isConnected = computed(() => store.isConnected);
 
 const modeOptions = [
@@ -44,20 +44,22 @@ const modeOptions = [
   { label: 'pins.modes.reboot', value: 10 },
 ];
 
+const translatedModeOptions = computed(() => 
+  modeOptions.map(opt => ({ ...opt, label: t(opt.label) }))
+);
+
 const updatePinMode = async (index: number, value: number) => {
-  if (!store.isConnected) return;
+  if (!isConnected.value || !store.gpio) return;
   
-  console.log(`[PinsTab] Pin ${index} mode changed to:`, value, `(${modeOptions.find(m => m.value === value)?.label})`);
+  const newModes = [...pinModes.value];
+  newModes[index] = value;
   
-  if (store.gpio) {
-    const newModes = [...pinModes.value];
-    newModes[index] = value;
-    
+  try {
     await store.updateGPIO({
       pin_mode: newModes
     });
-    
-    console.log(`[PinsTab] Updated pin_mode array:`, newModes);
+  } catch (err) {
+    console.error(`Failed to update Pin ${index} mode:`, err);
   }
 };
 </script>
@@ -77,52 +79,24 @@ const updatePinMode = async (index: number, value: number) => {
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  padding: 0.75rem;
+  padding: 1rem;
   backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  transition: all 0.2s;
+  gap: 0.75rem;
+  transition: all 0.2s ease;
 }
 
 .pin-card:hover {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent-muted);
+  border-color: var(--accent-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .pin-label {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  line-height: 1;
-}
-
-.compact {
-  margin-bottom: 0 !important;
-  width: 100%;
-}
-
-.compact :deep(select) {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text-main);
-  width: 100%;
-  font-size: 0.8rem;
-  padding: 6px 10px;
-  transition: all 0.2s;
-}
-
-.compact :deep(select):hover {
-  border-color: var(--accent);
-  background: rgba(0, 0, 0, 0.5);
-}
-
-.compact :deep(select):focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-muted);
-  outline: none;
 }
 </style>

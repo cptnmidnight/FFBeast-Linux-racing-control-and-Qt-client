@@ -5,30 +5,30 @@
       <BaseCard :title="$t('tools.ffb_diagnostics')">
         <p class="description">{{ $t('tools.ffb_desc') }}</p>
         <div class="test-controls">
-          <BaseSlider 
+          <ThemedSlider 
             v-model="testValues.constant" 
             :label="$t('tools.constant_force')" 
             :min="-100" 
             :max="100" 
-            suffix="%"
+            value-suffix="%"
             @update:model-value="(v: number) => updateFFB(1, v)"
             @change="resetFFB(1)"
           />
-          <BaseSlider 
+          <ThemedSlider 
             v-model="testValues.sine" 
             :label="$t('tools.sine_wave')" 
             :min="0" 
             :max="100" 
-            suffix="%"
+            value-suffix="%"
             @update:model-value="(v: number) => updateFFB(2, v)"
             @change="resetFFB(2)"
           />
-          <BaseSlider 
+          <ThemedSlider 
             v-model="testValues.damper" 
             :label="$t('tools.damping_effect')" 
             :min="0" 
             :max="100" 
-            suffix="%"
+            value-suffix="%"
             @update:model-value="(v: number) => updateFFB(3, v)"
             @change="resetFFB(3)"
           />
@@ -53,13 +53,15 @@
         <p class="description">{{ $t('tools.mapping_desc') }}</p>
         <div class="service-status-row">
           <span class="status-label">Status:</span>
-          <span :class="['status-badge', { active: mappingActive }]">
-            {{ mappingActive ? $t('status.service_active') : $t('status.service_inactive') }}
-          </span>
+          <StatusBadge 
+            :text="isServiceActive ? $t('status.service_active') : $t('status.service_inactive')"
+            :variant="isServiceActive ? 'success' : 'neutral'"
+            :pulsing="isServiceActive"
+          />
         </div>
         <div class="tools-grid">
           <button 
-            v-if="!mappingActive" 
+            v-if="!isServiceActive" 
             class="tool-btn success" 
             @click="toggleService(true)"
           >
@@ -80,15 +82,20 @@
 
 <script setup lang="ts">
 import { reactive, ref, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useHardwareStore } from '../../stores/hardware';
 import { useUIStore } from '../../stores/ui';
+import { useMappingPersistence } from '@shared/composables/useMappingPersistence';
+import { HardwareService } from '../../services/hardware_service';
 import BaseCard from '../common/BaseCard.vue';
-import BaseSlider from '../common/BaseSlider.vue';
-import type { AxisMapping } from '../../models/AxisMapping';
-import type { KeyMapping } from '../../models/KeyMapping';
+import ThemedSlider from '@shared/components/atoms/ThemedSlider.vue';
+import StatusBadge from '@shared/components/atoms/StatusBadge.vue';
+import type { KeyMapping } from '@shared/models/KeyMapping';
 
 const store = useHardwareStore();
 const ui = useUIStore();
+const { t } = useI18n();
+const { mappings, load: loadMappings } = useMappingPersistence();
 
 const testValues = reactive({
   constant: 0,
@@ -96,14 +103,15 @@ const testValues = reactive({
   damper: 0
 });
 
+const isServiceActive = ref(false);
+
 const updateFFB = (type: number, val: number) => {
-  // Map % to 0..32767
+  // Map percentage to 0..32767 hardware range
   const hwVal = (val / 100) * 32767;
   store.sendFFBTest(type, hwVal);
 };
 
 const resetFFB = (type: number) => {
-  // Zero out values
   if (type === 1) testValues.constant = 0;
   if (type === 2) testValues.sine = 0;
   if (type === 3) testValues.damper = 0;
@@ -117,123 +125,96 @@ const stopAll = () => {
   store.sendFFBTest(1, 0);
   store.sendFFBTest(2, 0);
   store.sendFFBTest(3, 0);
-  ui.showToast('All FFB tests stopped', 'info');
+  ui.showToast(t('toasts.ffb_stopped'), 'info');
 };
 
 const recalibrateCenter = async () => {
-  await store.resetCenter();
-  ui.showToast('Center recalibrated!', 'success');
+  try {
+    await store.resetCenter();
+  } catch (err) {
+    console.error('Failed to recalibrate center:', err);
+  }
 };
 
 const enterDfu = async () => {
-  if (confirm('Enter DFU Mode? Device will disconnect and enter firmware update mode.')) {
-    await store.enterDfu();
-    ui.showToast('Switching to DFU...', 'warn');
+  if (confirm(t('dialogs.enter_dfu_confirm'))) {
+    try {
+      await store.enterDfu();
+      ui.showToast(t('toasts.switching_dfu'), 'warn');
+    } catch (err) {
+      ui.showToast(`${t('toasts.dfu_failed')}: ${err}`, 'error');
+    }
   }
 };
 
 const factoryReset = () => {
-  if (confirm('Are you sure you want to reset all settings to factory defaults?')) {
-    ui.showToast('Factory reset not implemented in mock', 'warn');
+  if (confirm(t('dialogs.factory_reset_confirm'))) {
+    ui.showToast('Factory reset not implemented in current firmware version', 'warn');
   }
 };
-
-const mappingActive = ref(false);
 
 const toggleService = async (active: boolean) => {
   try {
-    const { HardwareService } = await import('../../services/hardware_service');
-    
     if (active) {
-      // Load saved axis mappings from localStorage
-      const savedMappings = localStorage.getItem('ffbeast_axis.mappings');
-      if (savedMappings) {
-        try {
-          const mappings: AxisMapping[] = JSON.parse(savedMappings);
-          const keyMappings: KeyMapping[] = [];
-          
-          // Determine which axes are active (same logic as InputsTab)
-          const activeAxes = [0, 1, 2, 3, 4, 5].filter(i => {
-            if (i < 3) return true;
-            return store.gpio?.pin_mode[i] === 2; // Analog mode
+      // Ensure latest mappings are loaded and sent before starting service
+      loadMappings();
+      
+      const keyMappings: KeyMapping[] = [];
+      const analogIndices = [0, 1, 2, 3, 4, 5, 6, 7].filter(i => {
+        if (i < 3) return true;
+        return store.gpio?.pin_mode[i] === 2; // Analog
+      });
+
+      analogIndices.forEach(idx => {
+        const m = mappings.value[idx];
+        if (!m) return;
+
+        if (m.keyHigh) {
+          keyMappings.push({
+            id: `axis.${idx}_high`,
+            source_type: 'axis',
+            index: idx,
+            trigger: 'high',
+            key: m.keyHigh,
+            threshold: m.thresholdHigh ?? 30000
           });
-          
-          mappings.forEach((mapping: AxisMapping, arrayIdx: number) => {
-            // Get the real hardware axis index
-            const actualAxisIndex = activeAxes[arrayIdx];
-            if (actualAxisIndex === undefined) return;
-            
-            // High threshold mapping
-            if (mapping.keyHigh) {
-              keyMappings.push({
-                id: `axis.${actualAxisIndex}_high_${mapping.keyHigh}`,
-                source_type: 'axis',
-                index: actualAxisIndex,  // Use actual hardware index
-                trigger: 'high',
-                key: mapping.keyHigh,
-                threshold: 3500
-              });
-            }
-            
-            // Low threshold mapping
-            if (mapping.keyLow) {
-              keyMappings.push({
-                id: `axis.${actualAxisIndex}_low_${mapping.keyLow}`,
-                source_type: 'axis',
-                index: actualAxisIndex,  // Use actual hardware index
-                trigger: 'low',
-                key: mapping.keyLow,
-                threshold: 500
-              });
-            }
-          });
-          
-          if (keyMappings.length > 0) {
-            await HardwareService.setKeyboardMapping(keyMappings);
-            store.log('info', `Loaded ${keyMappings.length} axis keyboard mappings from config`);
-          } else {
-            ui.showToast('No keyboard mappings configured. Configure in Inputs tab.', 'warn');
-          }
-        } catch (err) {
-          store.log('error', `Failed to parse saved mappings: ${err}`);
         }
-      } else {
-        ui.showToast('No keyboard mappings configured. Configure in Inputs tab.', 'warn');
+        if (m.keyLow) {
+          keyMappings.push({
+            id: `axis.${idx}_low`,
+            source_type: 'axis',
+            index: idx,
+            trigger: 'low',
+            key: m.keyLow,
+            threshold: m.thresholdLow ?? 2000
+          });
+        }
+      });
+
+      if (keyMappings.length > 0) {
+        await store.updateKeyboardMapping(keyMappings);
+        store.log('info', `Configured ${keyMappings.length} mappings for service start`);
       }
     }
-    
+
     await HardwareService.setKeyboardServiceActive(active);
-    mappingActive.value = active;
+    isServiceActive.value = active;
     
-    // Using import for log store too if needed, but it's easier to just use the one from hardware store or keep the import and USE IT
-    const { useLogStore } = await import('../../stores/logs');
-    const logStore = useLogStore();
-
-    logStore.addLog(
-      active ? 'info' : 'warn', 
-      active ? 'Keyboard mapping service started' : 'Keyboard mapping service stopped', 
-      'backend'
-    );
-
     ui.showToast(
-      active ? 'Mapping service started' : 'Mapping service stopped',
+      active ? t('toasts.service_started') : t('toasts.service_stopped'),
       active ? 'success' : 'info'
     );
   } catch (err) {
-    ui.showToast(`Failed to toggle service: ${err}`, 'error');
-    const { useLogStore } = await import('../../stores/logs');
-    useLogStore().addLog('error', `Mapping service error: ${err}`, 'backend');
+    ui.showToast(`${t('toasts.service_toggle_failed')}: ${err}`, 'error');
   }
 };
 
-// Sync initial state
 onMounted(async () => {
-    try {
-        const { HardwareService } = await import('../../services/hardware_service');
-        mappingActive.value = await HardwareService.getKeyboardServiceActive();
-    } catch (err) {
-        console.error('Failed to get service status:', err);
-    }
+  try {
+    isServiceActive.value = await HardwareService.getKeyboardServiceActive();
+  } catch (err) {
+    console.error('Failed to sync service status:', err);
+  }
 });
 </script>
 

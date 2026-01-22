@@ -4,7 +4,7 @@ import type { EffectSettings } from '../models/EffectSettings';
 import type { HardwareSettings } from '../models/HardwareSettings';
 import type { GpioSettings } from '../models/GpioSettings';
 import type { AdcSettings } from '../models/AdcSettings';
-import type { KeyMapping } from '../models/KeyMapping';
+import type { KeyMapping } from '@shared/models/KeyMapping';
 
 export const HardwareService = {
     async getHandshake(): Promise<{

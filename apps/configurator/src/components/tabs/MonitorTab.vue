@@ -7,21 +7,22 @@
         <div class="control-card">
           <div class="control-group">
             <span class="label">{{ $t('labels.ffb_active') }}</span>
-            <BaseSwitch 
+            <ThemedSwitch 
               v-model="ffbEnabled" 
-              @update:model-value="toggleFFB" 
+              help-key="help.force_enabled"
+              @change="toggleFFB" 
             />
           </div>
-          <div class="status-badge" :class="{ connected: store.isConnected }">
-            {{ store.isConnected ? $t('status.connected') : $t('status.disconnected') }}
-          </div>
+          <StatusBadge 
+            :text="store.isConnected ? $t('status.connected') : $t('status.disconnected')"
+            :variant="store.isConnected ? 'success' : 'error'"
+            :pulsing="!store.isConnected"
+          />
         </div>
       </div>
     </div>
 
-    <div v-if="uiStore.settings.debugMode" class="debug-panel">
-      <!-- ... same content ... -->
-      <h4>Raw Hardware Data</h4>
+    <BaseCard v-if="uiStore.settings.debugMode" :title="$t('labels.raw_data')" class="debug-panel">
       <div class="debug-grid">
         <div class="debug-item">
           <span class="d-label">Position:</span>
@@ -40,44 +41,47 @@
           <span class="d-value font-mono">[{{ analogValues.join(', ') }}]</span>
         </div>
       </div>
-    </div>
+    </BaseCard>
 
     <div class="middle-row">
       <AnalogMonitor :values="analogValues" :pinModes="pinModes" />
       <ButtonsGrid :buttons="currentButtons" />
     </div>
 
-    <div class="bottom-row" v-if="uiStore.settings.debugMode">
+    <BaseCard v-if="uiStore.settings.debugMode" :title="$t('labels.backend_logs')" class="bottom-row">
       <LogsWidget :logs="logs" />
-    </div>
+    </BaseCard>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
+import { storeToRefs } from 'pinia';
 import { useHardwareStore } from '../../stores/hardware';
 import { useLogStore } from '../../stores/logs';
 import { useUIStore } from '../../stores/ui';
-import { storeToRefs } from 'pinia';
+import { useHardwareStream } from '@shared/composables/useHardwareStream';
 import WheelVisual from '../monitor/WheelVisual.vue';
 import TorqueIndicator from '../monitor/TorqueIndicator.vue';
 import AnalogMonitor from '../monitor/AnalogMonitor.vue';
 import ButtonsGrid from '../monitor/ButtonsGrid.vue';
 import LogsWidget from '../monitor/LogsWidget.vue';
-import BaseSwitch from '../common/BaseSwitch.vue';
+import ThemedSwitch from '@shared/components/atoms/ThemedSwitch.vue';
+import StatusBadge from '@shared/components/atoms/StatusBadge.vue';
+import BaseCard from '../common/BaseCard.vue';
 
 const store = useHardwareStore();
 const logStore = useLogStore();
 const uiStore = useUIStore();
+const hardwareStream = useHardwareStream();
+
 const { logs } = storeToRefs(logStore);
 
-console.log('[MonitorTab] Initializing...');
-
-const currentPosition = computed(() => store.status?.position ?? 0);
-const currentTorque = computed(() => store.status?.torque ?? 0);
-const currentButtons = computed(() => store.status?.buttons ?? 0);
-const analogValues = computed(() => store.status?.adc ?? [0, 0, 0, 0, 0, 0, 0, 0]);
-const pinModes = computed(() => store.gpio?.pin_mode ?? []); // Get pin modes for filtering
+const currentPosition = computed(() => hardwareStream.status.value?.position ?? 0);
+const currentTorque = computed(() => hardwareStream.status.value?.torque ?? 0);
+const currentButtons = computed(() => hardwareStream.status.value?.buttons ?? 0);
+const analogValues = computed(() => hardwareStream.status.value?.adc ?? [0, 0, 0, 0, 0, 0, 0, 0]);
+const pinModes = computed(() => store.gpio?.pin_mode ?? []);
 
 const ffbEnabled = computed({
   get: () => store.hardware?.force_enabled === 1,
@@ -87,6 +91,11 @@ const ffbEnabled = computed({
 const toggleFFB = async (val: boolean) => {
   await store.updateHW({ force_enabled: val ? 1 : 0 });
 };
+
+onMounted(async () => {
+    // Backend log listener handled globally in App.vue usually,
+    // but ensured here if needed.
+});
 </script>
 
 <style scoped>
@@ -132,46 +141,14 @@ const toggleFFB = async (val: boolean) => {
   color: var(--text-main);
 }
 
-.status-badge {
-  font-size: 0.7rem;
-  font-weight: 800;
-  padding: 3px 8px;
-  border-radius: 20px;
-  background: rgba(255, 0, 0, 0.1);
-  color: var(--danger);
-  text-transform: uppercase;
-}
-
-.status-badge.connected {
-  background: rgba(0, 255, 0, 0.1);
-  color: var(--success);
-}
-
 .middle-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
 }
 
-.bottom-row {
-  display: grid;
-  grid-template-columns: 1fr;
-}
-
 .debug-panel {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 1rem;
   margin-bottom: 0.5rem;
-}
-
-.debug-panel h4 {
-  font-size: 0.8rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  margin-bottom: 0.8rem;
-  letter-spacing: 1px;
 }
 
 .debug-grid {
@@ -179,6 +156,7 @@ const toggleFFB = async (val: boolean) => {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 1rem;
 }
+
 
 .debug-item {
   display: flex;

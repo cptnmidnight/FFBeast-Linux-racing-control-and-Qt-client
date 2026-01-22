@@ -10,7 +10,7 @@ import { useUIStore } from './ui';
 import { t } from '../i18n';
 import { useLogStore } from './logs';
 
-import type { KeyMapping } from '../models/KeyMapping';
+import type { KeyMapping } from '@shared/models/KeyMapping';
 
 export const useHardwareStore = defineStore('hardware', {
     state: () => ({

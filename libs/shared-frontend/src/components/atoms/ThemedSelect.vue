@@ -1,6 +1,9 @@
 <template>
-  <div class="themed-select">
-    <label v-if="label" class="themed-select__label">{{ label }}</label>
+  <div class="themed-select" :data-help="helpKey">
+    <div v-if="label" class="themed-select__header">
+      <label class="themed-select__label">{{ label }}</label>
+      <div v-if="helpKey" class="themed-select__help-icon" :title="$t(helpKey)">?</div>
+    </div>
     <select
       :value="modelValue"
       :disabled="disabled"
@@ -27,17 +30,19 @@ export interface SelectOption {
 }
 
 interface Props {
-  modelValue: string | number;
+  modelValue: string | number | undefined;
   options: SelectOption[] | string[] | number[];
   label?: string;
   placeholder?: string;
   disabled?: boolean;
+  helpKey?: string;
 }
 
 withDefaults(defineProps<Props>(), {
   label: '',
   placeholder: '',
   disabled: false,
+  helpKey: undefined,
 });
 
 const emit = defineEmits<{
@@ -80,10 +85,40 @@ function handleChange(event: Event) {
   width: 100%;
 }
 
+.themed-select__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .themed-select__label {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-main);
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.themed-select__help-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.themed-select__help-icon:hover {
+  background: var(--accent-primary);
+  color: #000;
+  border-color: var(--accent-primary);
 }
 
 .themed-select__input {
@@ -107,12 +142,12 @@ function handleChange(event: Event) {
 }
 
 .themed-select__input:hover:not(:disabled) {
-  border-color: var(--accent);
+  border-color: var(--accent-primary, var(--accent, #00d4ff));
 }
 
 .themed-select__input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+  border-color: var(--accent-primary, var(--accent, #00d4ff));
+  box-shadow: 0 0 0 3px rgba(var(--accent-primary-rgb, 0, 212, 255), 0.1);
 }
 
 .themed-select__input--disabled {

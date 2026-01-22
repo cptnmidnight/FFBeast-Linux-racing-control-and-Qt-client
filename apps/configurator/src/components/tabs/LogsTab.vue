@@ -1,25 +1,28 @@
 <template>
   <div class="logs-tab">
-    <BaseCard :title="$t('tabs.logs') + ' (Live)'" class="full-height">
+    <BaseCard :title="$t('tabs.logs') + ' (Live)'" class="logs-card">
       <template #header>
-        <div class="header-content">
-          <h3>{{ $t('tabs.logs') }} (Live)</h3>
-          <div class="actions">
-            <label class="auto-scroll-toggle">
-              <input type="checkbox" v-model="autoScroll">
-              <span>Auto-scroll</span>
+        <div class="logs-header">
+          <div class="logs-title">
+            <h3>{{ $t('tabs.logs') }}</h3>
+            <span class="logs-badge">Live</span>
+          </div>
+          <div class="logs-actions">
+            <label class="scroll-toggle">
+              <input type="checkbox" v-model="autoScroll" class="scroll-checkbox">
+              <span>{{ $t('labels.auto_scroll') || 'Auto-scroll' }}</span>
             </label>
-            <button class="btn-small" @click="clearLogs">Clear</button>
-            <button class="btn-small" @click="exportLogs">Export</button>
+            <button class="btn-action" @click="clearLogs">{{ $t('buttons.clear') || 'Clear' }}</button>
+            <button class="btn-action" @click="exportLogs">{{ $t('buttons.export') || 'Export' }}</button>
           </div>
         </div>
       </template>
-      <div class="logs-wrapper" ref="scrollContainer">
-        <div v-for="(log, index) in logs" :key="index" :class="['log-line', log.level]">
-          <span class="time">[{{ log.time }}]</span>
-          <span class="source" v-if="log.source">[{{ log.source.toUpperCase().slice(0,2) }}]</span>
-          <span class="level">[{{ log.level.toUpperCase() }}]</span>
-          <span class="message">{{ log.message }}</span>
+      <div class="logs-viewport" ref="scrollContainer">
+        <div v-for="(log, index) in logs" :key="index" :class="['log-item', log.level]">
+          <span class="log-time">[{{ log.time }}]</span>
+          <span class="log-source" v-if="log.source">[{{ log.source.toUpperCase().slice(0,2) }}]</span>
+          <span class="log-level">[{{ log.level.toUpperCase() }}]</span>
+          <span class="log-message">{{ log.message }}</span>
         </div>
       </div>
     </BaseCard>
@@ -28,9 +31,9 @@
 
 <script setup lang="ts">
 import { ref, watch, nextTick, onMounted } from 'vue';
-import BaseCard from '../common/BaseCard.vue';
-import { useLogStore } from '../../stores/logs';
 import { storeToRefs } from 'pinia';
+import { useLogStore } from '../../stores/logs';
+import BaseCard from '../common/BaseCard.vue';
 
 const logStore = useLogStore();
 const { logs } = storeToRefs(logStore);
@@ -45,7 +48,6 @@ const scrollToBottom = async () => {
   }
 };
 
-// Watch for new logs to auto-scroll
 watch(() => logs.value.length, () => {
   if (autoScroll.value) {
     scrollToBottom();
@@ -58,13 +60,11 @@ const clearLogs = () => {
 
 const exportLogs = () => {
   const content = logs.value.map(l => `[${l.time}] [${l.level.toUpperCase()}] ${l.message}`).join('\n');
-  
-  // Create a blob and download it
   const blob = new Blob([content], { type: 'text/plain' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `ffbeast-logs-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
+  a.download = `sodevs-logs-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.txt`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -72,100 +72,117 @@ const exportLogs = () => {
 };
 
 onMounted(() => {
-    scrollToBottom();
+  scrollToBottom();
 });
 </script>
 
 <style scoped>
 .logs-tab {
   padding: var(--content-padding);
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+  height: calc(100vh - 120px);
 }
 
-.full-height {
+.logs-card {
   height: 100%;
-  display: flex !important;
-  flex-direction: column;
-  overflow: hidden; /* Prevent card itself from growing */
 }
 
-/* Force the internal content area of BaseCard to be a flex child that doesn't overflow */
 :deep(.card-content) {
+  height: 100%;
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  flex: 1;
 }
 
-.header-content {
+.logs-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
 }
 
-.actions {
+.logs-title {
   display: flex;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
 }
 
-.btn-small {
-  padding: 4px 10px;
-  font-size: 0.75rem;
-  border: 1px solid var(--border-bright);
-  border-radius: var(--radius-sm);
-  color: var(--text-dim);
+.logs-badge {
+  font-size: 10px;
+  background: rgba(var(--status-success-rgb), 0.15);
+  color: var(--status-success);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.btn-small:hover {
-  background: rgba(255,255,255,0.05);
-  color: var(--text-main);
+.logs-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.auto-scroll-toggle {
+.scroll-toggle {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.75rem;
-  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
   cursor: pointer;
-  margin-right: 8px;
-  user-select: none;
 }
 
-.auto-scroll-toggle input {
-  cursor: pointer;
-  accent-color: var(--accent);
+.scroll-checkbox {
+  accent-color: var(--accent-primary);
 }
 
-.logs-wrapper {
+.btn-action {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-action:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--text-main);
+  color: var(--text-main);
+}
+
+.logs-viewport {
   flex: 1;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: var(--radius-sm);
-  padding: 1rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.25rem;
   font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: 13px;
   overflow-y: auto;
-  min-height: 0; /* Important for flex child overflow */
+  margin-top: 1rem;
 }
 
-.log-line {
-  margin-bottom: 4px;
+.log-item {
+  margin-bottom: 6px;
+  line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-all;
-  overflow-wrap: anywhere;
-  line-height: 1.4;
 }
 
-.time { color: var(--text-dim); margin-right: 8px; }
-.source { color: var(--primary); margin-right: 8px; font-weight: bold; }
-.level { font-weight: bold; margin-right: 8px; width: 60px; display: inline-block; }
-.info .level { color: var(--info); }
-.warn .level { color: var(--warning); }
-.error .level { color: var(--danger); }
-.debug .level { color: #888; }
-.message { color: var(--text-main); }
+.log-time { color: var(--text-secondary); opacity: 0.7; margin-right: 10px; }
+.log-source { color: var(--accent-primary); margin-right: 10px; font-weight: 600; opacity: 0.8; }
+.log-level { font-weight: 700; margin-right: 10px; width: 60px; display: inline-block; }
+
+.info .log-level { color: var(--status-info); }
+.warn .log-level { color: var(--status-warning); }
+.error .log-level { color: var(--status-error); }
+.trace .log-level { color: #888; }
+.debug .log-level { color: #aaa; }
+
+.log-message { color: var(--text-main); }
 </style>
+

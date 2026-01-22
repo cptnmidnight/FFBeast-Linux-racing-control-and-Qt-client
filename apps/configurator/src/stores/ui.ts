@@ -41,9 +41,30 @@ export const useUIStore = defineStore('ui', {
         async toggleDebugMode(enabled: boolean) {
             this.settings.debugMode = enabled;
             localStorage.setItem('ffbeast_debug_mode', String(enabled));
-            // When legacy debug mode is toggled, it might influence the min log level
-            // but for now we just keep the boolean for UI compatibility if needed
         },
+
+        setLanguage(lang: string) {
+            localStorage.setItem('ffbeast_language', lang);
+        },
+
+        setFontFamily(font: string) {
+            this.settings.fontFamily = font;
+            document.documentElement.style.setProperty('--font-main', font);
+            localStorage.setItem('ffbeast_font', font);
+        },
+
+        setFontSize(size: number) {
+            this.settings.fontSize = size;
+            document.documentElement.style.fontSize = `${size}px`;
+            localStorage.setItem('ffbeast_font_size', String(size));
+        },
+
+        setAccentColor(color: string) {
+            document.documentElement.style.setProperty('--accent', color);
+            document.documentElement.style.setProperty('--accent-glow', color + '66');
+            localStorage.setItem('ffbeast_accent', color);
+        },
+
         showToast(message: string, type: Toast['type'] = 'info', duration = 3000) {
             const id = Date.now();
             this.toasts.push({ id, message, type, duration });

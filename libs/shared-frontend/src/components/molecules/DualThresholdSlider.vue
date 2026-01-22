@@ -1,14 +1,42 @@
 <template>
   <div class="dual-threshold-slider">
     <div v-if="label" class="dual-threshold-slider__header">
-      <label class="dual-threshold-slider__label">{{ label }}</label>
+      <div class="dual-threshold-slider__label-group">
+        <label class="dual-threshold-slider__label">{{ label }}</label>
+        <span v-if="rawValue !== undefined" class="dual-threshold-slider__live-badge">
+          {{ rawValue }}
+        </span>
+        <div v-if="helpKey" class="dual-threshold-slider__help-icon" :title="t(helpKey)">?</div>
+      </div>
       <div class="dual-threshold-slider__values">
-        <span class="dual-threshold-slider__value dual-threshold-slider__value--low">
-          {{ t('general.low') }}: {{ lowValue }}
-        </span>
-        <span class="dual-threshold-slider__value dual-threshold-slider__value--high">
-          {{ t('general.high') }}: {{ highValue }}
-        </span>
+        <div class="dual-threshold-slider__input-group dual-threshold-slider__input-group--low">
+          <label>{{ t('general.low') }}</label>
+          <input
+            type="number"
+            :value="localLow"
+            :min="min"
+            :max="inputLowMax"
+            :step="step"
+            :disabled="disabled"
+            @input="handleLowInput"
+            @blur="commitLowInput"
+            @keydown.enter="commitLowInput"
+          />
+        </div>
+        <div class="dual-threshold-slider__input-group dual-threshold-slider__input-group--high">
+          <label>{{ t('general.high') }}</label>
+          <input
+            type="number"
+            :value="localHigh"
+            :min="inputHighMin"
+            :max="max"
+            :step="step"
+            :disabled="disabled"
+            @input="handleHighInput"
+            @blur="commitHighInput"
+            @keydown.enter="commitHighInput"
+          />
+        </div>
       </div>
     </div>
     
@@ -61,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 interface Props {
@@ -75,6 +103,7 @@ interface Props {
   rawValue?: number;
   maxLow?: number;
   minHigh?: number;
+  helpKey?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -86,12 +115,24 @@ const props = withDefaults(defineProps<Props>(), {
   rawValue: undefined,
   maxLow: undefined,
   minHigh: undefined,
+  helpKey: undefined,
 });
 
 const emit = defineEmits<{
   'update:lowValue': [value: number];
   'update:highValue': [value: number];
 }>();
+
+const localLow = ref<number | string>(props.lowValue);
+const localHigh = ref<number | string>(props.highValue);
+
+watch(() => props.lowValue, (newVal: number) => {
+  localLow.value = newVal;
+});
+
+watch(() => props.highValue, (newVal: number) => {
+  localHigh.value = newVal;
+});
 
 const { t } = useI18n();
 
@@ -113,7 +154,7 @@ const axisBarStyle = computed(() => {
   const percent = ((val - props.min) / range) * 100;
   
   return {
-    width: `${percent}%`
+    left: `${percent}%`
   };
 });
 
@@ -134,34 +175,79 @@ const inputHighMin = computed(() => {
   return collisionArg;
 });
 
+let lowCommitTimer: ReturnType<typeof setTimeout> | null = null;
+let highCommitTimer: ReturnType<typeof setTimeout> | null = null;
+
 function handleLowInput(event: Event) {
   const target = event.target as HTMLInputElement;
-  let value = Number(target.value);
-  
-  // Enforce maxLow if present
-  if (props.maxLow !== undefined && value > props.maxLow) {
-    value = props.maxLow;
+  localLow.value = target.value;
+
+  if (lowCommitTimer) clearTimeout(lowCommitTimer);
+  lowCommitTimer = setTimeout(() => {
+    commitLowInput();
+  }, 500);
+}
+
+function commitLowInput() {
+  if (lowCommitTimer) {
+    clearTimeout(lowCommitTimer);
+    lowCommitTimer = null;
   }
 
-  // Ensure low value doesn't exceed high value
-  if (value < props.highValue) {
-    emit('update:lowValue', value);
+  let val = Number(localLow.value);
+  if (isNaN(val) || localLow.value === '') {
+    localLow.value = props.lowValue;
+    return;
   }
+
+  // Business logic: if "wrong", revert to original value
+  const isOutOfRange = val < props.min || val > props.max;
+  const exceedsMaxLow = props.maxLow !== undefined && val > props.maxLow;
+  const crossesHigh = val >= props.highValue;
+
+  if (isOutOfRange || exceedsMaxLow || crossesHigh) {
+    localLow.value = props.lowValue;
+    return;
+  }
+
+  localLow.value = val;
+  emit('update:lowValue', val);
 }
 
 function handleHighInput(event: Event) {
   const target = event.target as HTMLInputElement;
-  let value = Number(target.value);
-  
-  // Enforce minHigh if present
-  if (props.minHigh !== undefined && value < props.minHigh) {
-    value = props.minHigh;
+  localHigh.value = target.value;
+
+  if (highCommitTimer) clearTimeout(highCommitTimer);
+  highCommitTimer = setTimeout(() => {
+    commitHighInput();
+  }, 500);
+}
+
+function commitHighInput() {
+  if (highCommitTimer) {
+    clearTimeout(highCommitTimer);
+    highCommitTimer = null;
   }
 
-  // Ensure high value doesn't go below low value
-  if (value > props.lowValue) {
-    emit('update:highValue', value);
+  let val = Number(localHigh.value);
+  if (isNaN(val) || localHigh.value === '') {
+    localHigh.value = props.highValue;
+    return;
   }
+
+  // Business logic: if "wrong", revert to original value
+  const isOutOfRange = val < props.min || val > props.max;
+  const belowMinHigh = props.minHigh !== undefined && val < props.minHigh;
+  const crossesLow = val <= props.lowValue;
+
+  if (isOutOfRange || belowMinHigh || crossesLow) {
+    localHigh.value = props.highValue;
+    return;
+  }
+
+  localHigh.value = val;
+  emit('update:highValue', val);
 }
 </script>
 
@@ -178,12 +264,55 @@ function handleHighInput(event: Event) {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  margin-bottom: 2px;
+}
+
+.dual-threshold-slider__label-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .dual-threshold-slider__label {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-main);
+  font-family: 'Outfit', sans-serif;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dual-threshold-slider__live-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  padding: 2px 6px;
+  background: rgba(var(--accent-primary-rgb), 0.1);
+  color: var(--accent-primary);
+  border-radius: 4px;
+  border: 1px solid rgba(var(--accent-primary-rgb), 0.2);
+  min-width: 45px;
+  text-align: center;
+}
+
+.dual-threshold-slider__help-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: help;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.dual-threshold-slider__help-icon:hover {
+  background: var(--accent-primary);
+  color: #000;
+  border-color: var(--accent-primary);
 }
 
 .dual-threshold-slider__values {
@@ -191,18 +320,48 @@ function handleHighInput(event: Event) {
   gap: 16px;
 }
 
-.dual-threshold-slider__value {
-  font-size: 12px;
+.dual-threshold-slider__input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-sidebar, #121216);
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.1));
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+
+.dual-threshold-slider__input-group label {
+  font-size: 10px;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--text-dim);
+}
+
+.dual-threshold-slider__input-group input {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-family: var(--font-mono, monospace);
+  font-size: 13px;
   font-weight: 600;
-  font-family: 'JetBrains Mono', monospace;
+  width: 60px;
+  text-align: right;
+  outline: none;
 }
 
-.dual-threshold-slider__value--low {
-  color: var(--warning);
+.dual-threshold-slider__input-group--low {
+  color: var(--status-warning, #ffa502);
+  border-color: rgba(var(--status-warning-rgb, 255, 165, 2), 0.3);
 }
 
-.dual-threshold-slider__value--high {
-  color: var(--success);
+.dual-threshold-slider__input-group--high {
+  color: var(--status-success, #00ff88);
+  border-color: rgba(var(--status-success-rgb, 0, 255, 136), 0.3);
+}
+
+.dual-threshold-slider__input-group:focus-within {
+  border-color: currentColor;
+  box-shadow: 0 0 5px currentColor;
 }
 
 .dual-threshold-slider__container {
@@ -247,7 +406,7 @@ function handleHighInput(event: Event) {
   margin: 0;
   padding: 0;
   border: 0;
-  height: 6px;
+  height: 24px;
   top: 50%;
   transform: translateY(-50%);
   background: transparent;
@@ -281,6 +440,7 @@ function handleHighInput(event: Event) {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
   border: 3px solid var(--bg-card);
   z-index: 2;
+  margin-top: -1px; /* Centering for Chrome: slightly adjusted since track is in container center */
 }
 
 .dual-threshold-slider__input::-moz-range-thumb {
@@ -345,11 +505,14 @@ function handleHighInput(event: Event) {
   left: 0;
   bottom: 0;
   height: 100%;
-  background: rgba(255, 255, 255, 0.15); /* More visible */
-  border-radius: 4px;
+  background: #00f3ff;
+  box-shadow: 0 0 8px #00f3ff, 0 0 15px rgba(0, 243, 255, 0.5);
+  border-radius: 2px;
   pointer-events: none;
-  z-index: 0;
-  transition: width 0.05s linear;
+  z-index: 10;
+  width: 3px !important;
+  margin-left: -1px;
+  transition: left 0.1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .dual-threshold-slider__range {

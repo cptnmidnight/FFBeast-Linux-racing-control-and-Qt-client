@@ -3,7 +3,7 @@
     <div class="mapping-modal">
       <div class="modal-header">
         <h3 class="modal-title">
-          {{ $t('axis.edit_title') }} <span class="highlight">{{ axisName }}</span>
+          {{ t('axis.edit_title') }} <span class="highlight">{{ axisName }}</span>
         </h3>
         <button class="close-btn" @click="close">×</button>
       </div>
@@ -13,14 +13,15 @@
         <div class="form-group">
           <ThemedInput
             v-model="localName"
-            :label="$t('axis.custom_name')"
+            :label="t('axis.custom_name')"
+            help-key="help.axis_custom_name"
           />
         </div>
         
         <div class="mapping-section">
-          <div class="section-divider">{{ $t('axis.keyboard_mapping') }}</div>
+          <div class="section-divider">{{ t('axis.keyboard_mapping') }}</div>
           
-              <!-- Deadzone/Threshold Sliders -->
+          <!-- Deadzone/Threshold Sliders -->
           <div class="deadzone-config">
             <DualThresholdSlider
               v-model:lowValue="config.thresholdLow"
@@ -29,8 +30,9 @@
               :max="32767"
               :max-low="13106"
               :min-high="19660"
-              :label="$t('settings.deadzone') || 'Thresholds'"
+              :label="t('settings.deadzone')"
               :raw-value="liveValue"
+              help-key="help.motion_range"
             />
           </div>
 
@@ -38,20 +40,36 @@
             <ThemedSelect
               v-model="config.keyLow"
               :options="keyOptions"
-              :label="$t('axis.key_low')"
+              :label="t('axis.key_low')"
             />
             <ThemedSelect
               v-model="config.keyHigh"
               :options="keyOptions"
-              :label="$t('axis.key_high')"
+              :label="t('axis.key_high')"
             />
           </div>
+
+          <template v-if="showButtons">
+            <div class="section-divider" style="margin-top: 24px;">{{ t('axis.joystick_mapping') }}</div>
+            <div class="form-row">
+              <ThemedSelect
+                v-model="config.btnLow"
+                :options="buttonOptions"
+                :label="$t('axis.button_low') || 'Button Low'"
+              />
+              <ThemedSelect
+                v-model="config.btnHigh"
+                :options="buttonOptions"
+                :label="$t('axis.button_high') || 'Button High'"
+              />
+            </div>
+          </template>
         </div>
       </div>
 
       <div class="modal-footer">
-        <button class="btn-outline" @click="close">{{ $t('modals.cancel') }}</button>
-        <button class="btn-primary" @click="save">{{ $t('modals.save') }}</button>
+        <button class="btn-outline" @click="close">{{ t('modals.cancel') }}</button>
+        <button class="btn-primary" @click="save">{{ t('modals.save') }}</button>
       </div>
     </div>
   </div>
@@ -60,9 +78,9 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import ThemedInput from '../shared/atoms/ThemedInput.vue';
-import ThemedSelect, { type SelectOption } from '../shared/atoms/ThemedSelect.vue';
-import DualThresholdSlider from '../shared/molecules/DualThresholdSlider.vue';
+import ThemedInput from '../atoms/ThemedInput.vue';
+import ThemedSelect, { type SelectOption } from '../atoms/ThemedSelect.vue';
+import DualThresholdSlider from '../molecules/DualThresholdSlider.vue';
 import { useHardwareStream } from '../../composables/useHardwareStream';
 
 export interface MappingConfig {
@@ -70,17 +88,22 @@ export interface MappingConfig {
   thresholdLow: number;
   keyHigh: string;
   thresholdHigh: number;
+  btnLow?: string;
+  btnHigh?: string;
 }
 
 interface Props {
   show: boolean;
-  axisIndex: number | null;
+  axisIndex: number; // Required for fetching live data
   axisName: string;
-  axisValue: number; // Initial value
+  axisValue: number; // Initial/Fallback value
   initialConfig: MappingConfig;
+  showButtons?: boolean;
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  showButtons: false
+});
 
 const emit = defineEmits<{
   'close': [];
@@ -92,13 +115,13 @@ const { status: hardwareStream } = useHardwareStream();
 
 // Real-time value from stream, fallback to prop
 const liveValue = computed(() => {
-  if (props.axisIndex !== null && hardwareStream.value?.adc) {
+  if (props.axisIndex !== undefined && hardwareStream.value?.adc) {
     // Map logical axis (0, 1, 2) to hardware analogs (3, 4, 5)
     // Hardware often sends 12-bit (0-4095). We need to scale this to 16-bit (0-32767)
     const raw = hardwareStream.value.adc[props.axisIndex + 3] ?? 0;
     return Math.floor((raw * 32767) / 4095);
   }
-  return props.axisValue;
+  return props.axisValue || 0;
 });
 
 // Local state
@@ -108,13 +131,19 @@ const config = ref<MappingConfig>({
   thresholdLow: 2000,
   keyHigh: '',
   thresholdHigh: 30000,
+  btnLow: '',
+  btnHigh: '',
 });
 
 // Watch triggers to sync props to local state
-watch(() => props.show, (newVal) => {
+watch(() => props.show, (newVal: boolean) => {
   if (newVal) {
     localName.value = props.axisName;
-    config.value = { ...props.initialConfig };
+    config.value = { 
+      btnLow: '',
+      btnHigh: '',
+      ...props.initialConfig 
+    };
   }
 }, { immediate: true });
 
@@ -122,13 +151,21 @@ watch(() => props.show, (newVal) => {
 const KEY_LIST = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "Up", "Down", "Left", "Right", "Space", "Enter", "Tab", "Shift", "Ctrl", "Alt", "Esc"];
 
 const keyOptions = computed(() => {
-  const opts: SelectOption[] = [{ label: t('options.none'), value: '' }];
+  const opts: SelectOption[] = [{ label: t('options.none') || 'None', value: '' }];
   KEY_LIST.forEach(k => {
     // Check if translation exists, otherwise use the key name
     const translationKey = `keys.${k.toLowerCase()}`;
     const keyLabel = t(translationKey) !== translationKey ? t(translationKey) : k;
     opts.push({ label: keyLabel, value: k });
   });
+  return opts;
+});
+
+const buttonOptions = computed(() => {
+  const opts: SelectOption[] = [{ label: t('options.none') || 'None', value: '' }];
+  for (let i = 0; i < 32; i++) {
+    opts.push({ label: `${t('labels.button') || 'Button'} ${i + 1}`, value: `BUTTON_${i}` });
+  }
   return opts;
 });
 
@@ -212,9 +249,34 @@ function save() {
 }
 
 .preview-monitor {
-  padding: 12px;
-  background: rgba(0, 0, 0, 0.2);
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid var(--border);
   border-radius: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.preview-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  font-weight: 700;
+}
+
+.preview-value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 600;
 }
 
 .section-divider {

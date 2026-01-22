@@ -7,9 +7,7 @@ use tauri::{Emitter, State};
 use tracing::{info, instrument};
 use tracing_subscriber::prelude::*;
 
-mod keyboard_service;
-
-use keyboard_service::{KeyMapping, KeyboardService};
+use sodevs_input_manager::{InputManager, KeyMapping};
 
 static APP_HANDLE: OnceLock<tauri::AppHandle> = OnceLock::new();
 static MIN_LOG_LEVEL: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(3); // Default to INFO (3)
@@ -284,13 +282,13 @@ fn send_direct_control(
 }
 
 #[tauri::command]
-fn get_keyboard_service_active(service: State<'_, Arc<KeyboardService>>) -> bool {
+fn get_keyboard_service_active(service: State<'_, Arc<InputManager>>) -> bool {
     service.is_active()
 }
 
 #[tauri::command]
 fn set_keyboard_service_active(
-    service: State<'_, Arc<KeyboardService>>,
+    service: State<'_, Arc<InputManager>>,
     enabled: bool,
 ) -> Result<(), String> {
     service.set_active(enabled);
@@ -299,7 +297,7 @@ fn set_keyboard_service_active(
 
 #[tauri::command]
 fn set_keyboard_mapping(
-    service: State<'_, Arc<KeyboardService>>,
+    service: State<'_, Arc<InputManager>>,
     mappings: Vec<KeyMapping>,
 ) -> Result<(), String> {
     service.set_mappings(mappings);
@@ -346,7 +344,7 @@ pub fn run() {
     std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1");
 
     let hardware = Arc::new(HardwareService::new());
-    let keyboard = Arc::new(KeyboardService::new());
+    let keyboard = Arc::new(InputManager::new());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())

@@ -3,11 +3,11 @@ import { type I18n } from 'vue-i18n';
 // Helper to get translations outside Vue components
 // This uses the global i18n instance that's created in main.ts
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let i18nInstance: I18n<any, any, any, any, any> | null = null;
+type I18nInstance = I18n<Record<string, unknown>, Record<string, unknown>, Record<string, unknown>, Record<string, unknown>, false>;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function setI18nInstance(instance: I18n<any, any, any, any, any>) {
+let i18nInstance: I18nInstance | null = null;
+
+export function setI18nInstance(instance: I18nInstance) {
     i18nInstance = instance;
 }
 
@@ -16,6 +16,7 @@ export function t(key: string): string {
         console.warn('[i18n] Instance not set, returning key:', key);
         return key;
     }
-    // accessing global.t in valid way
-    return (i18nInstance.global as any).t(key);
+
+    // global.t is the translation function
+    return (i18nInstance.global as { t: (k: string) => string }).t(key);
 }

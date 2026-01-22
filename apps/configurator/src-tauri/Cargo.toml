@@ -24,4 +24,4 @@ anyhow = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "registry", "fmt"] }
 ffbeast-controller = { path = "../../../libs/controller" }
-enigo = "0.6.1"
+sodevs-input-manager = { path = "../../../libs/input_manager" }

@@ -1,121 +1,122 @@
 <template>
   <div class="effects-tab">
     <div class="grid-layout">
-      <!-- Basics -->
+      <!-- General Effects -->
       <BaseCard :title="$t('groups.general')">
-        <BaseSlider 
+        <ThemedSlider 
           v-model="effects.motion_range" 
           :label="$t('settings.motion_range')" 
-          :help="$t('help.motion_range')"
           :min="180" 
           :max="1440" 
           :step="10" 
-          suffix="°" 
+          value-suffix="°" 
+          help-key="help.motion_range"
           @update:model-value="saveEffects"
         />
-        <BaseSlider 
+        <ThemedSlider 
           v-model="effects.total_effect_strength" 
           :label="$t('settings.total_strength')" 
-          :help="$t('help.total_effect_strength')"
-          suffix="%"
+          value-suffix="%"
+          help-key="help.total_effect_strength"
           @update:model-value="saveEffects"
         />
       </BaseCard>
 
-      <!-- Soft Stop -->
+      <!-- Soft Stop Configuration -->
       <BaseCard :title="$t('groups.soft_stop')">
-        <BaseSlider 
+        <ThemedSlider 
           v-model="effects.soft_stop_strength" 
           :label="$t('settings.soft_stop_strength')" 
-          :help="$t('help.soft_stop_strength')"
-          suffix="%"
+          value-suffix="%"
+          help-key="help.soft_stop_strength"
           @update:model-value="saveEffects"
         />
-        <BaseSlider 
+        <ThemedSlider 
           v-model="effects.soft_stop_range" 
           :label="$t('settings.soft_stop_range')" 
-          :help="$t('help.soft_stop_range')"
-          suffix="°"
+          value-suffix="°"
           :max="255"
+          help-key="help.soft_stop_range"
           @update:model-value="saveEffects"
         />
-        <BaseSlider 
+        <ThemedSlider 
           v-model="effects.soft_stop_dampening_strength" 
           :label="$t('settings.soft_stop_dampening')" 
-          :help="$t('help.soft_stop_dampening')"
-          suffix="%"
+          value-suffix="%"
           :max="1000"
+          help-key="help.soft_stop_dampening"
           @update:model-value="saveEffects"
         />
       </BaseCard>
 
-      <!-- Internal Filter -->
+      <!-- Dampening & Resistance -->
       <BaseCard :title="$t('groups.dampening')">
-        <BaseSlider 
+        <ThemedSlider 
           v-model="effects.integrated_spring_strength" 
           :label="$t('settings.integrated_spring')" 
-          :help="$t('help.integrated_spring_strength')"
-          suffix="%"
+          value-suffix="%"
+          help-key="help.integrated_spring_strength"
           @update:model-value="saveEffects"
         />
-        <BaseSlider 
+        <ThemedSlider 
           v-model="effects.static_dampening_strength" 
           :label="$t('settings.static_dampening')" 
-          :help="$t('help.static_dampening_strength')"
-          suffix="%"
+          value-suffix="%"
           :max="1000"
+          help-key="help.static_dampening_strength"
           @update:model-value="saveEffects"
         />
-        <BaseSlider 
+        <ThemedSlider 
           v-model="effects.dynamic_dampening_strength" 
           :label="$t('settings.dynamic_dampening')" 
-          :help="$t('help.dynamic_dampening_strength')"
-          suffix="%"
+          value-suffix="%"
           :max="1000"
+          help-key="help.dynamic_dampening_strength"
           @update:model-value="saveEffects"
         />
       </BaseCard>
 
-      <!-- DirectX (Game Effects) -->
+      <!-- Game API / DirectX -->
       <BaseCard :title="$t('groups.directx')">
-        <BaseSlider 
+        <ThemedSlider 
           v-model="effects.direct_x_constant_strength" 
           :label="$t('settings.dx_constant')" 
-          :help="$t('help.direct_x_constant_strength')"
-          suffix="%"
+          value-suffix="%"
+          help-key="help.direct_x_constant_strength"
           @update:model-value="saveEffects"
         />
-        <BaseSlider 
+        <ThemedSlider 
           v-model="effects.direct_x_periodic_strength" 
           :label="$t('settings.dx_periodic')" 
-          :help="$t('help.direct_x_periodic_strength')"
-          suffix="%"
+          value-suffix="%"
+          help-key="help.direct_x_periodic_strength"
           @update:model-value="saveEffects"
         />
-        <BaseSlider 
+        <ThemedSlider 
           v-model="effects.direct_x_spring_strength" 
           :label="$t('settings.dx_spring')" 
-          :help="$t('help.direct_x_spring_strength')"
-          suffix="%"
+          value-suffix="%"
+          help-key="help.direct_x_spring_strength"
           @update:model-value="saveEffects"
         />
-        <BaseSwitch 
+        <ThemedSwitch 
           v-model="invertGameForce" 
           :label="$t('settings.invert_game_force')" 
-          :help="$t('help.invert_game_force')"
-          @update:model-value="handleInvert"
+          help-key="help.invert_game_force"
+          @change="handleInvert"
         />
       </BaseCard>
     </div>
   </div>
 </template>
 
+
 <script setup lang="ts">
 import { ref, reactive, watch } from 'vue';
 import { useHardwareStore } from '../../stores/hardware';
 import BaseCard from '../common/BaseCard.vue';
-import BaseSlider from '../common/BaseSlider.vue';
-import BaseSwitch from '../common/BaseSwitch.vue';
+import ThemedSlider from '@shared/components/atoms/ThemedSlider.vue';
+import ThemedSwitch from '@shared/components/atoms/ThemedSwitch.vue';
 
 const store = useHardwareStore();
 

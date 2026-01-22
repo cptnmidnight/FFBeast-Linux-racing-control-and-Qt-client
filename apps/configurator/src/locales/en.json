@@ -90,10 +90,10 @@
         "pos_smoothing": "Position Smoothing",
         "axis": {
             "invert": "Invert Axis",
-            "smoothing": "Smoothing (%)",
+            "smoothing": "Smoothing",
             "buttons": {
-                "low": "Button Low (%)",
-                "high": "Button High (%)"
+                "low": "Button Low",
+                "high": "Button High"
             }
         },
         "min": "Min",
@@ -157,7 +157,14 @@
         "soft_stop_dampening": "Dampening force applied when hitting the soft stop.",
         "encoder_cpr": "Counts Per Revolution (CPR) of the encoder.",
         "speed_buffer": "Size of the buffer used to smooth speed calculation.",
-        "position_smoothing": "Smoothing factor for position signal (0-255)."
+        "position_smoothing": "Smoothing factor for position signal (0-255).",
+        "axis_custom_name": "Friendly name for identifying this axis in the UI and game mappings.",
+        "axis_buttons_low": "Defines the percentage threshold where the virtual button associated with the low axis value will be activated.",
+        "axis_buttons_high": "Defines the percentage threshold where the virtual button associated with the high axis value will be activated.",
+        "spi_latch_delay": "Wait time after latching before starting SPI transfer. Helps synchronization on slower shift registers.",
+        "spi_pulse": "Length of the clock pulse (Clock speed). Increase this if you experience noise or unreliable data on long cables.",
+        "axis_min": "The minimum raw value expected from the sensor. Values below this will be clamped to 0%.",
+        "axis_max": "The maximum raw value expected from the sensor. Values above this will be clamped to 100%."
     },
     "warnings": {
         "reboot_required": "Changes requiring reboot detected"

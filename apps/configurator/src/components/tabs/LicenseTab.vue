@@ -2,32 +2,37 @@
   <div class="license-tab">
     <BaseCard :title="$t('license.info')">
       <div class="license-status">
-        <div class="status-icon" :class="{ active: isLicensed }">
-          {{ isLicensed ? '✅' : '❌' }}
+        <div class="status-icon" :class="{ 'status-icon--active': isLicensed }">
+          {{ isLicensed ? '✅' : '🔒' }}
         </div>
         <div class="status-details">
-          <h4>{{ isLicensed ? $t('status.activated') : $t('status.trial') }}</h4>
+          <h4 class="status-title">{{ isLicensed ? $t('status.activated') : $t('status.trial') }}</h4>
           <div class="id-row">
-            <span class="label">{{ $t('license.device_id') }}:</span>
-            <code>{{ deviceId }}</code>
-            <button class="btn-icon" @click="copyId" :title="$t('tooltip_copy_id')">📋</button>
+            <span class="id-label">{{ $t('license.device_id') }}:</span>
+            <code class="id-code">{{ deviceId }}</code>
+            <button class="action-btn" @click="copyId" :title="$t('tooltip_copy_id')">📋</button>
           </div>
-          <div v-if="serialKey" class="id-row">
-            <span class="label">{{ $t('license.serial_key') }}:</span>
-            <code>{{ serialKey }}</code>
-            <button class="btn-icon" @click="copySerialKey" :title="$t('tooltip_copy_serial')">📋</button>
+          <div v-if="serialKey && serialKey !== '00000000'" class="id-row">
+            <span class="id-label">{{ $t('license.serial_key') }}:</span>
+            <code class="id-code">{{ serialKey }}</code>
+            <button class="action-btn" @click="copySerialKey" :title="$t('tooltip_copy_serial')">📋</button>
           </div>
         </div>
       </div>
 
-      <div class="license-activation">
-        <h3>{{ $t('license.activation') }}</h3>
-        <p class="desc">{{ $t('license.serial_placeholder') }}</p>
-        <div class="input-group">
-          <input type="text" :placeholder="$t('license.serial_placeholder')" v-model="licenseKey" />
-          <div class="btn-group">
+      <div class="activation-section">
+        <h3 class="section-title">{{ $t('license.activation') }}</h3>
+        <p class="section-desc">{{ $t('license.serial_placeholder_desc') || 'Enter your serial key to unlock full features.' }}</p>
+        
+        <div class="activation-form">
+          <ThemedInput 
+            v-model="licenseKey" 
+            :placeholder="$t('license.serial_placeholder')" 
+            class="serial-input"
+          />
+          <div class="button-row">
             <button class="btn-primary" @click="activate">{{ $t('buttons.activate') }}</button>
-            <button class="btn-outline" @click="importFile">{{ $t('buttons.import') }}</button>
+            <button class="btn-secondary" @click="importFile">{{ $t('buttons.import') }}</button>
           </div>
         </div>
       </div>
@@ -37,13 +42,16 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useHardwareStore } from '../../stores/hardware';
 import { useUIStore } from '../../stores/ui';
 import { formatHexArray } from '../../utils/format';
 import BaseCard from '../common/BaseCard.vue';
+import ThemedInput from '@shared/components/atoms/ThemedInput.vue';
 
 const store = useHardwareStore();
 const ui = useUIStore();
+const { t } = useI18n();
 
 const isLicensed = computed(() => store.status?.is_registered ?? false);
 const licenseKey = ref('');
@@ -52,29 +60,29 @@ const serialKey = computed(() => formatHexArray(store.status?.serial_key));
 
 const copyId = async () => {
   await navigator.clipboard.writeText(deviceId.value);
-  ui.showToast('ID copied to clipboard', 'info');
+  ui.showToast(t('toasts.id_copied'), 'info');
 };
 
 const copySerialKey = async () => {
   await navigator.clipboard.writeText(serialKey.value);
-  ui.showToast('Serial key copied to clipboard', 'info');
+  ui.showToast(t('toasts.serial_copied'), 'info');
 };
 
 const activate = async () => {
   if (!licenseKey.value) {
-    ui.showToast('Please enter a serial key', 'error');
+    ui.showToast(t('toasts.enter_serial'), 'error');
     return;
   }
   try {
     await store.activateLicense(licenseKey.value);
-    ui.showToast('License activated! Rebooting device...', 'success');
+    ui.showToast(t('toasts.activation_success'), 'success');
   } catch (err) {
-    ui.showToast('Activation failed: ' + err, 'error');
+    ui.showToast(`${t('toasts.activation_failed')}: ${err}`, 'error');
   }
 };
 
 const importFile = () => {
-  ui.showToast('Import from file not yet implemented', 'info');
+  ui.showToast(t('toasts.feature_not_ready'), 'info');
 };
 </script>
 
@@ -88,91 +96,107 @@ const importFile = () => {
   align-items: center;
   gap: 1.5rem;
   margin-bottom: 2.5rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--bg-secondary-rgb), 0.3);
   padding: 1.5rem;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
 }
 
 .status-icon {
   font-size: 2.5rem;
 }
 
-.status-details h4 {
-  margin: 0 0 10px;
+.status-title {
+  margin: 0 0 8px;
   color: var(--text-main);
-  font-size: 1.1rem;
+  font-size: 1.25rem;
+  font-weight: 700;
 }
 
 .id-row {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-top: 6px;
 }
 
-.id-row .label {
-  color: var(--text-dim);
-  font-size: 0.85rem;
+.id-label {
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
-code {
-  background: rgba(0,0,0,0.3);
-  padding: 4px 10px;
-  border-radius: 4px;
-  color: var(--accent);
+.id-code {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 4px 12px;
+  border-radius: 6px;
+  color: var(--accent-primary);
   font-family: var(--font-mono);
-  font-size: 0.9rem;
-  border: 1px solid var(--border-bright);
+  font-size: 13px;
+  border: 1px solid var(--border-color);
 }
 
-.btn-icon {
-  font-size: 1.1rem;
-  opacity: 0.6;
-}
-
-.btn-icon:hover { opacity: 1; }
-
-.license-activation h3 {
+.action-btn {
+  background: transparent;
+  border: none;
   font-size: 1rem;
-  margin-bottom: 10px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.2s;
 }
 
-.desc {
-  color: var(--text-dim);
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
+.action-btn:hover {
+  opacity: 1;
 }
 
-.input-group {
+.activation-section {
+  padding-top: 1rem;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.section-desc {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-bottom: 1.5rem;
+}
+
+.activation-form {
   display: flex;
   flex-direction: column;
+  gap: 1.5rem;
+}
+
+.button-row {
+  display: flex;
   gap: 12px;
 }
 
-input {
-  width: 100%;
-  padding: 12px;
-  font-family: var(--font-mono);
-}
-
-.btn-group {
-  display: flex;
-  gap: 10px;
-}
-
 .btn-primary {
-  background: var(--accent);
+  flex: 2;
+  background: var(--accent-primary);
   color: #000;
-  font-weight: bold;
+  font-weight: 700;
   padding: 10px 24px;
-  border-radius: var(--radius-sm);
-  flex: 1;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
 }
 
-.btn-outline {
-  border: 1px solid var(--border-bright);
+.btn-secondary {
+  flex: 1;
+  background: transparent;
+  border: 1px solid var(--border-color);
   color: var(--text-main);
   padding: 10px 24px;
-  border-radius: var(--radius-sm);
+  border-radius: 6px;
+  cursor: pointer;
 }
+
+.btn-primary:hover { filter: brightness(1.1); }
+.btn-secondary:hover { background: rgba(255, 255, 255, 0.05); }
 </style>
+

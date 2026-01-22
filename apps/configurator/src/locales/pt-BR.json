@@ -90,10 +90,10 @@
         "pos_smoothing": "Suavização de Posição",
         "axis": {
             "invert": "Inverter Eixo",
-            "smoothing": "Suavização (%)",
+            "smoothing": "Suavização",
             "buttons": {
-                "low": "Botão Baixo (%)",
-                "high": "Botão Alto (%)"
+                "low": "Botão Baixo",
+                "high": "Botão Alto"
             }
         },
         "min": "Mín",
@@ -157,7 +157,14 @@
         "soft_stop_dampening": "Força de amortecimento aplicada ao atingir o soft stop.",
         "encoder_cpr": "Contagens Por Revolução (CPR) do encoder.",
         "speed_buffer": "Tamanho do buffer usado para suavizar o cálculo de velocidade.",
-        "position_smoothing": "Fator de suavização do sinal de posição (0-255)."
+        "position_smoothing": "Fator de suavização do sinal de posição (0-255).",
+        "axis_custom_name": "Nome amigável para identificar este eixo na interface e nos mapeamentos de jogos.",
+        "axis_buttons_low": "Define o limite percentual onde o botão virtual associado ao valor baixo do eixo será ativado.",
+        "axis_buttons_high": "Define o limite percentual onde o botão virtual associado ao valor alto do eixo será ativado.",
+        "spi_latch_delay": "Tempo de espera após o latch antes de iniciar a transferência SPI. Ajuda na sincronização de registradores de deslocamento mais lentos.",
+        "spi_pulse": "Duração do pulso de clock (Velocidade do Clock). Aumente se houver ruído ou dados não confiáveis em cabos longos.",
+        "axis_min": "O valor bruto mínimo esperado do sensor. Valores abaixo deste serão limitados a 0%.",
+        "axis_max": "O valor bruto máximo esperado do sensor. Valores acima deste serão limitados a 100%."
     },
     "warnings": {
         "reboot_required": "Alterações que requerem reinicialização detectadas"
