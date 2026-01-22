@@ -25,7 +25,9 @@
     <MappingEditModal 
       v-if="editingIdx !== null"
       :show="showModal" 
+      :axis-index="editingIdx"
       :axis-name="axisNames[editingIdx] || DEFAULT_NAMES[editingIdx]"
+      :axis-value="0"
       :live-value="getScaledAxisValue(editingIdx)"
       :initial-config="getCurrentMappingConfig(editingIdx)"
       :show-buttons="true"

@@ -11,7 +11,7 @@
           :model-value="mode" 
           :options="translatedModeOptions" 
           :disabled="!isConnected"
-          @change="(v: number) => updateButtonMode(index, v)"
+          @change="(v) => updateButtonMode(index, v)"
         />
       </div>
     </div>
@@ -41,11 +41,12 @@ const translatedModeOptions = computed(() =>
   modeOptions.map(opt => ({ ...opt, label: t(opt.label) }))
 );
 
-const updateButtonMode = async (index: number, value: number) => {
+const updateButtonMode = async (index: number, value: string | number) => {
   if (!isConnected.value || !store.gpio) return;
   
+  const numValue = Number(value);
   const newModes = [...buttonModes.value];
-  newModes[index] = value;
+  newModes[index] = numValue;
   
   try {
     await store.updateGPIO({

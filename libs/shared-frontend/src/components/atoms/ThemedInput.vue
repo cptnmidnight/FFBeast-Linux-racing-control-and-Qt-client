@@ -47,7 +47,7 @@ interface Props {
   helpKey?: string;
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   type: 'text',
   label: '',
   placeholder: '',

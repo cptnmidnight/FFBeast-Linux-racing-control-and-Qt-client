@@ -8,7 +8,7 @@
           :options="translatedModeOptions" 
           :label="$t('settings.ext_mode')"
           class="protocol-select"
-          @change="(v: number) => handleModeChange(v)"
+          @change="(v) => handleModeChange(v)"
         />
       </div>
     </BaseCard>
@@ -127,10 +127,11 @@ const detailKeys = ['none', 'custom', 'tm_style', '165_style', 'tm', 'vpc'];
 const currentModeTitle = computed(() => titleKeys[extensionMode.value] || 'modes.extension.none');
 const currentModeDetail = computed(() => detailKeys[extensionMode.value] || 'none');
 
-const handleModeChange = async (value: number) => {
+const handleModeChange = async (value: string | number) => {
   if (store.gpio) {
+    const numValue = Number(value);
     await store.updateGPIO({
-      extension_mode: value
+      extension_mode: numValue
     });
   }
 };
