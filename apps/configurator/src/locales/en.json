@@ -174,7 +174,8 @@
         "status": "Status",
         "activation": "Activation",
         "serial_key": "Serial Key",
-        "serial_placeholder": "Paste serial key here..."
+        "serial_placeholder": "Paste serial key here...",
+        "serial_placeholder_desc": "Enter your serial key to unlock full features."
     },
     "messages": {
         "keyboard_warning": "Note: Keyboard mapping requires the 'Mapping Service' to be running.",
@@ -363,7 +364,9 @@
         "no_mappings_configured": "No keyboard mappings configured. Configure in Inputs tab.",
         "service_toggle_failed": "Failed to toggle service",
         "test_notification": "This is a test toast notification! 🎉",
-        "id_copied": "ID copied to clipboard"
+        "id_copied": "ID copied to clipboard",
+        "activation_success": "License activated successfully!",
+        "feature_not_ready": "Feature not ready yet"
     },
     "dialogs": {
         "enter_dfu_confirm": "Are you sure you want to enter DFU mode? This is typically used for firmware updates.",

@@ -174,7 +174,8 @@
         "status": "Status",
         "activation": "Ativação",
         "serial_key": "Chave Serial",
-        "serial_placeholder": "Cole a chave serial aqui..."
+        "serial_placeholder": "Cole a chave serial aqui...",
+        "serial_placeholder_desc": "Insira sua chave serial para desbloquear todos os recursos."
     },
     "messages": {
         "keyboard_warning": "Nota: Mapeamento de teclado requer que o 'Serviço de Mapeamento' esteja rodando.",
@@ -363,7 +364,9 @@
         "no_mappings_configured": "Nenhum mapeamento de teclado configurado. Configure na aba Eixos.",
         "service_toggle_failed": "Falha ao alternar serviço",
         "test_notification": "Esta é uma notificação de teste! 🎉",
-        "id_copied": "ID copiado para a área de transferência"
+        "id_copied": "ID copiado para a área de transferência",
+        "activation_success": "Licença ativada com sucesso!",
+        "feature_not_ready": "Funcionalidade ainda não disponível"
     },
     "dialogs": {
         "enter_dfu_confirm": "Tem certeza que deseja entrar em modo DFU? Isso é usado para atualizações de firmware.",
