@@ -95,9 +95,8 @@ const liveValue = computed(() => {
   if (props.axisIndex !== null && hardwareStream.value?.adc) {
     // Map logical axis (0, 1, 2) to hardware analogs (3, 4, 5)
     // Hardware often sends 12-bit (0-4095). We need to scale this to 16-bit (0-32767)
-    // 4095 * 8 ~= 32760
     const raw = hardwareStream.value.adc[props.axisIndex + 3] ?? 0;
-    return Math.min(32767, raw * 8);
+    return Math.floor((raw * 32767) / 4095);
   }
   return props.axisValue;
 });

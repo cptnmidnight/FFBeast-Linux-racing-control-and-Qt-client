@@ -1,8 +1,8 @@
+use enigo::{Direction, Enigo, Key, Keyboard, Settings};
 use ffbeast_controller::models::wheel_status::WheelStatus;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::Mutex;
-use enigo::{Enigo, Key, Keyboard, Settings, Direction};
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct KeyMapping {
@@ -26,7 +26,7 @@ impl KeyboardService {
         // Initialize Enigo. Returns None if backend initialization fails (e.g., missing X11 libs on Linux).
         // This prevents the application from crashing on systems without proper input support.
         let enigo = Enigo::new(&Settings::default()).ok();
-        
+
         if enigo.is_none() {
             tracing::warn!("KeyboardService: Failed to initialize Enigo (missing dependencies?). Keyboard simulation will be disabled.");
         }
@@ -54,7 +54,7 @@ impl KeyboardService {
             let mut active_state = self.active_keys.lock().unwrap();
             let mappings = self.mappings.lock().unwrap();
             let mut enigo_guard = self.enigo.lock().unwrap();
-            
+
             if let Some(enigo) = enigo_guard.as_mut() {
                 tracing::info!(
                     "KeyboardService: Releasing {} held keys",
@@ -88,7 +88,7 @@ impl KeyboardService {
         static PROCESS_COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
         let count = PROCESS_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         if count % 120 == 0 {
-             // Reduced log verbosity
+            // Reduced log verbosity
         }
 
         let inputs_to_process = {
@@ -98,7 +98,7 @@ impl KeyboardService {
 
         let mut active_state = self.active_keys.lock().unwrap();
         let mut enigo_guard = self.enigo.lock().unwrap();
-        
+
         // If Enigo failed to init, we just skip processing but don't crash
         let enigo = match enigo_guard.as_mut() {
             Some(e) => e,
@@ -116,10 +116,13 @@ impl KeyboardService {
                 }
                 "axis" => {
                     let val = status.adc.get(map.index).cloned().unwrap_or(0);
+                    // Scale 12-bit (0-4095) to 15-bit (0-32767) to match frontend slider
+                    let val_scaled = (val as i32 * 32767) / 4095;
                     let thr = map.threshold.unwrap_or(2048);
+
                     match map.trigger.as_str() {
-                        "high" => (val as i32) > thr,
-                        "low" => (val as i32) < thr,
+                        "high" => val_scaled > thr,
+                        "low" => val_scaled < thr,
                         _ => false,
                     }
                 }
@@ -164,16 +167,24 @@ fn parse_key(k: &str) -> Option<Key> {
         "META" | "SUPER" | "WIN" => Some(Key::Meta),
         "OPTION" => Some(Key::Option),
         // F keys
-        "F1" => Some(Key::F1), "F2" => Some(Key::F2), "F3" => Some(Key::F3),
-        "F4" => Some(Key::F4), "F5" => Some(Key::F5), "F6" => Some(Key::F6),
-        "F7" => Some(Key::F7), "F8" => Some(Key::F8), "F9" => Some(Key::F9),
-        "F10" => Some(Key::F10), "F11" => Some(Key::F11), "F12" => Some(Key::F12),
+        "F1" => Some(Key::F1),
+        "F2" => Some(Key::F2),
+        "F3" => Some(Key::F3),
+        "F4" => Some(Key::F4),
+        "F5" => Some(Key::F5),
+        "F6" => Some(Key::F6),
+        "F7" => Some(Key::F7),
+        "F8" => Some(Key::F8),
+        "F9" => Some(Key::F9),
+        "F10" => Some(Key::F10),
+        "F11" => Some(Key::F11),
+        "F12" => Some(Key::F12),
         // Chars
         c if c.len() == 1 => {
-             let ch = c.chars().next().unwrap();
-             // Force lowercase to ensure we send standard keys without implicity Shift
-             Some(Key::Unicode(ch.to_ascii_lowercase())) 
+            let ch = c.chars().next().unwrap();
+            // Force lowercase to ensure we send standard keys without implicity Shift
+            Some(Key::Unicode(ch.to_ascii_lowercase()))
         }
-        _ => None
+        _ => None,
     }
 }
