@@ -48,6 +48,11 @@
       <ButtonsGrid :buttons="currentButtons" />
     </div>
 
+    <div class="charts-row">
+      <TorqueChart :model-value="currentTorque" :max="10000" :min="-10000" label="Torque (Horizontal)" color="#4CAF50" />
+      <TorqueChart :model-value="currentTorque" :max="10000" :min="-10000" label="Torque (Vertical)" color="#2196F3" orientation="vertical" />
+    </div>
+
     <BaseCard v-if="uiStore.settings.debugMode" :title="$t('labels.backend_logs')" class="bottom-row">
       <LogsWidget :logs="logs" />
     </BaseCard>
@@ -63,6 +68,7 @@ import { useUIStore } from '../../stores/ui';
 import { useHardwareStream } from '@shared/composables/useHardwareStream';
 import WheelVisual from '../monitor/WheelVisual.vue';
 import TorqueIndicator from '../monitor/TorqueIndicator.vue';
+import TorqueChart from '../monitor/TorqueChart.vue';
 import AnalogMonitor from '../monitor/AnalogMonitor.vue';
 import ButtonsGrid from '../monitor/ButtonsGrid.vue';
 import LogsWidget from '../monitor/LogsWidget.vue';
@@ -145,6 +151,12 @@ onMounted(async () => {
 }
 
 .middle-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.charts-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1rem;
