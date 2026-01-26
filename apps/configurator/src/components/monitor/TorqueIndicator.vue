@@ -38,9 +38,16 @@ const torquePercent = computed(() => {
 // Actual max = (power_limit / 100) * 15 Nm
 const MOTOR_MAX_TORQUE_NM = 15;
 const powerLimit = computed(() => store.hardware?.power_limit ?? 100);
+const effectStrength = computed(() => store.effects?.total_effect_strength ?? 100);
+
 const torqueNm = computed(() => {
-  const actualMaxTorque = (powerLimit.value / 100) * MOTOR_MAX_TORQUE_NM;
-  return (torquePercent.value / 100) * actualMaxTorque;
+  const powerScale = powerLimit.value / 100;
+  const effectScale = effectStrength.value / 100;
+  
+  const combinedScale = powerScale * effectScale;
+  const maxTorque = combinedScale * MOTOR_MAX_TORQUE_NM;
+  
+  return (torquePercent.value / 100) * maxTorque;
 });
 </script>
 
