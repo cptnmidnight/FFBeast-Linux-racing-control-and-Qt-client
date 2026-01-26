@@ -1,41 +1,29 @@
 #include "wheel_api.h"
-#include <cstdio>
-#include <cstring>
 
-PACKED_STRUCT_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
   uint8_t ReportId;
   EffectSettingsTypeDef effectSettings;
-} PACKED_ATTR EffectSettingsReportTypeDef;
-PACKED_STRUCT_END
+} EffectSettingsReportTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
   uint8_t ReportId;
   HardwareSettingsTypeDef hardwareSettings;
-} PACKED_ATTR HardwareSettingsReportTypeDef;
-PACKED_STRUCT_END
+} HardwareSettingsReportTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
   uint8_t ReportId;
   AdcExtensionSettingsTypeDef adcExtensionSettings;
-} PACKED_ATTR AdcExtensionSettingsReportTypeDef;
-PACKED_STRUCT_END
+} AdcExtensionSettingsReportTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
   uint8_t ReportId;
   GpioExtensionSettingsTypeDef gpioExtensionSettings;
-} PACKED_ATTR GpioExtensionSettingsReportTypeDef;
-PACKED_STRUCT_END
+} GpioExtensionSettingsReportTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
   uint8_t ReportId;
   DeviceStateTypeDef state;
-} PACKED_ATTR StateReportTypeDef;
-PACKED_STRUCT_END
+} StateReportTypeDef;
 
 WheelApi::WheelApi() { hid_init(); }
 
@@ -54,13 +42,7 @@ int WheelApi::connect() {
   }
   if (path_to_open) {
     handle = hid_open_path(path_to_open);
-    if (handle) {
-      result = 1;
-    } else {
-      fprintf(stderr, "Detailed Error: hid_open_path failed for path: %s\n",
-              path_to_open);
-      result = 0;
-    }
+    result = 1;
   }
   hid_free_enumeration(devs);
   return result;
@@ -130,8 +112,8 @@ int WheelApi::readHardwareSettings(HardwareSettingsTypeDef *destination) {
   if (handle != nullptr) {
     HardwareSettingsReportTypeDef report;
     report.ReportId = REPORT_HARDWARE_SETTINGS_FEATURE;
-    result = hid_get_feature_report(handle, (unsigned char *)&report,
-                                    sizeof(HardwareSettingsReportTypeDef));
+    int result = hid_get_feature_report(handle, (unsigned char *)&report,
+                                        sizeof(HardwareSettingsReportTypeDef));
     if (result > 0) {
       memcpy(destination, &report.hardwareSettings,
              sizeof(HardwareSettingsTypeDef));
@@ -146,8 +128,9 @@ int WheelApi::readGpioExtensionSettings(
   if (handle != nullptr) {
     GpioExtensionSettingsReportTypeDef report;
     report.ReportId = REPORT_GPIO_SETTINGS_FEATURE;
-    result = hid_get_feature_report(handle, (unsigned char *)&report,
-                                    sizeof(GpioExtensionSettingsReportTypeDef));
+    int result =
+        hid_get_feature_report(handle, (unsigned char *)&report,
+                               sizeof(GpioExtensionSettingsReportTypeDef));
     if (result > 0) {
       memcpy(destination, &report.gpioExtensionSettings,
              sizeof(GpioExtensionSettingsTypeDef));
@@ -162,8 +145,9 @@ int WheelApi::readAdcExtensionSettings(
   if (handle != nullptr) {
     AdcExtensionSettingsReportTypeDef report;
     report.ReportId = REPORT_ADC_SETTINGS_FEATURE;
-    result = hid_get_feature_report(handle, (unsigned char *)&report,
-                                    sizeof(AdcExtensionSettingsReportTypeDef));
+    int result =
+        hid_get_feature_report(handle, (unsigned char *)&report,
+                               sizeof(AdcExtensionSettingsReportTypeDef));
     if (result > 0) {
       memcpy(destination, &report.adcExtensionSettings,
              sizeof(AdcExtensionSettingsTypeDef));
@@ -175,38 +159,11 @@ int WheelApi::readAdcExtensionSettings(
 int WheelApi::readState(DeviceStateTypeDef *destination) {
   if (handle != nullptr) {
     StateReportTypeDef report;
-    int latest_res = 0;
-    int res;
-
-    // 1. Drain buffer effectively
-    unsigned char temp_buf[65];
-    int count = 0;
-    while ((res = hid_read_timeout(handle, temp_buf, 65, 0)) > 0) {
-      memcpy(&report, temp_buf, 65); // Update our local report holder
-      latest_res = res;
-      count++;
-    }
-
-    // 2. If nothing was in buffer, wait a bit for a fresh packet
-    if (latest_res == 0) {
-      res =
-          hid_read_timeout(handle, (unsigned char *)&report, 65, 5); // 5ms wait
-      if (res > 0)
-        latest_res = res;
-    }
-
-    // 3. Copy only the final state to destination
-    if (latest_res > 0) {
-      memcpy(destination, &report.state, sizeof(DeviceStateTypeDef));
-      return latest_res;
-    }
-
-    // If buffer was empty, wait a bit for new data
-    latest_res = hid_read_timeout(handle, (unsigned char *)&report, 65, 20);
-    if (latest_res > 0) {
+    int result = hid_read_timeout(handle, (unsigned char *)&report, 65, 100);
+    if (result > 0) {
       memcpy(destination, &report.state, sizeof(DeviceStateTypeDef));
     }
-    return latest_res;
+    return result;
   }
   return 0;
 }

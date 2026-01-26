@@ -23,6 +23,8 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useHardwareStore } from '../../stores/hardware';
 import ThemedSelect from '@shared/components/atoms/ThemedSelect.vue';
+import { HardwareSettingId } from '../../models/HardwareSettingId';
+import { ButtonMode } from '../../models/ProtocolEnums';
 
 const store = useHardwareStore();
 const { t } = useI18n();
@@ -31,10 +33,10 @@ const buttonModes = computed(() => store.gpio?.button_mode ?? new Array(32).fill
 const isConnected = computed(() => store.isConnected);
 
 const modeOptions = [
-  { label: 'modes.btn.none', value: 0 },
-  { label: 'modes.btn.normal', value: 1 },
-  { label: 'modes.btn.inverted', value: 2 },
-  { label: 'modes.btn.pulse', value: 3 },
+  { label: 'modes.btn.none', value: ButtonMode.None },
+  { label: 'modes.btn.normal', value: ButtonMode.Normal },
+  { label: 'modes.btn.inverted', value: ButtonMode.Inverted },
+  { label: 'modes.btn.pulse', value: ButtonMode.Pulse },
 ];
 
 const translatedModeOptions = computed(() => 
@@ -49,6 +51,9 @@ const updateButtonMode = async (index: number, value: string | number) => {
   newModes[index] = numValue;
   
   try {
+    // Send individual field update for Button Mode (Field 29)
+    await store.updateHWField(HardwareSettingId.ButtonMode, index, numValue);
+    
     await store.updateGPIO({
       button_mode: newModes
     });

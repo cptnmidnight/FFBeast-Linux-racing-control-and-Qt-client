@@ -73,15 +73,26 @@ export default defineComponent({
                     }
                 });
                 
-                // Update Hardware Settings
-                // Merge with current to avoid overwriting other values
-                const newHwSettings = {
-                    ...currentHwSettings,
-                    force_direction: invertForce.value ? -1 : 1
-                };
+                // Update Hardware Settings - individual fields
+                // Power Limit
+                await invoke("update_hardware_setting", {
+                    fieldId: 17,
+                    index: 0,
+                    data: [Number(currentHwSettings.power_limit || 100)]
+                });
+                
+                // Braking Limit
+                await invoke("update_hardware_setting", {
+                    fieldId: 18,
+                    index: 0,
+                    data: [Number(currentHwSettings.braking_limit || 100)]
+                });
 
-                await invoke("update_hardware_settings", {
-                    settings: newHwSettings
+                // Force Direction
+                await invoke("update_hardware_setting", {
+                    fieldId: 22,
+                    index: 0,
+                    data: [invertForce.value ? -1 : 1]
                 });
                 
                 // Save to EEPROM

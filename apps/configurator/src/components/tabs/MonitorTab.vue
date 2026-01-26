@@ -69,6 +69,7 @@ import LogsWidget from '../monitor/LogsWidget.vue';
 import ThemedSwitch from '@shared/components/atoms/ThemedSwitch.vue';
 import StatusBadge from '@shared/components/atoms/StatusBadge.vue';
 import BaseCard from '../common/BaseCard.vue';
+import { HardwareSettingId } from '../../models/HardwareSettingId';
 
 const store = useHardwareStore();
 const logStore = useLogStore();
@@ -89,7 +90,9 @@ const ffbEnabled = computed({
 });
 
 const toggleFFB = async (val: boolean) => {
-  await store.updateHW({ force_enabled: val ? 1 : 0 });
+  const numVal = val ? 1 : 0;
+  await store.updateHWField(HardwareSettingId.ForceEnabled, 0, numVal);
+  await store.updateHW({ force_enabled: numVal });
 };
 
 onMounted(async () => {

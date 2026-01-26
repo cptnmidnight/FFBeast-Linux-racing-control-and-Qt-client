@@ -5,6 +5,7 @@ import type { HardwareSettings } from '../models/HardwareSettings';
 import type { GpioSettings } from '../models/GpioSettings';
 import type { AdcSettings } from '../models/AdcSettings';
 import type { KeyMapping } from '@shared/models/KeyMapping';
+import { HardwareSettingId } from '../models/HardwareSettingId';
 
 export const HardwareService = {
     async getHandshake(): Promise<{
@@ -25,8 +26,8 @@ export const HardwareService = {
         await invoke('update_effect_settings', { settings });
     },
 
-    async updateHardwareSettings(settings: HardwareSettings): Promise<void> {
-        await invoke('update_hardware_settings', { settings });
+    async updateHardwareSetting(fieldId: HardwareSettingId, index: number, data: number[]): Promise<void> {
+        await invoke('update_hardware_setting', { fieldId, index, data });
     },
 
     async updateGpioSettings(settings: GpioSettings): Promise<void> {

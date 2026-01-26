@@ -1,26 +1,13 @@
 #ifndef WHEEL_API_H
 #define WHEEL_API_H
 
-#include "hidapi.h"
+#include <hidapi.h>
 #include <stdbool.h>
 #include <stdint.h>
 
 
 #define USB_VID 1115
 #define WHEEL_PID_FS 22999
-
-// Macro para empacotamento de structs (Compatibilidade MSVC/GCC)
-#ifdef _MSC_VER
-#define PACKED_STRUCT_BEGIN __pragma(pack(push, 1))
-#define PACKED_STRUCT_END __pragma(pack(pop))
-#define PACKED_ATTR
-#define FFBEAST_API __declspec(dllexport)
-#else
-#define PACKED_STRUCT_BEGIN
-#define PACKED_STRUCT_END
-#define PACKED_ATTR __attribute__((packed))
-#define FFBEAST_API
-#endif
 
 enum { INTERFACE_VENDOR = 0, INTERFACE_JOYSTICK = 1 };
 
@@ -40,7 +27,6 @@ typedef enum SettingsFieldEnum {
   SETTINGS_FIELD_SOFT_STOP_RANGE = 7,
   SETTINGS_FIELD_STATIC_DAMPENING_STRENGTH = 8,
   SETTINGS_FIELD_SOFT_STOP_DAMPENING_STRENGTH = 9,
-  SETTINGS_FIELD_DYNAMIC_DAMPENING_STRENGTH = 10,
   SETTINGS_FIELD_FORCE_ENABLED = 11,
   SETTINGS_FIELD_DEBUG_TORQUE = 12,
   SETTINGS_FIELD_AMPLIFIER_GAIN = 13,
@@ -103,15 +89,19 @@ typedef enum AmplifierGainEnum {
 } AmplifierGainEnum;
 
 typedef enum SpiModeEnum {
-  SPI_MODE_0 = 0,
-  SPI_MODE_1 = 1,
-  SPI_MODE_2 = 2,
-  SPI_MODE_3 = 3,
+  SPI_MODE_0 = 0, // The first bit is outputted immediately when CS activates.
+                  // READ-CLK_UP-DELAY-CLK_DOWN-DELAY
+  SPI_MODE_1 = 1, // The first bit is outputted on first clock edge after CS
+                  // activates CLK_UP-DELAY-READ-CLK_DOWN-DELAY
+  SPI_MODE_2 = 2, // The first bit is outputted immediately when CS activates.
+                  // READ-CLK_DOWN-DELAY-CLK_UP-DELAY
+  SPI_MODE_3 = 3, // The first bit is outputted on first clock edge after CS
+                  // activates CLK_DOWN-DELAY-READ-CLK_UP-DELAY
 } SpiModeEnum;
 
 typedef enum SpiLatchModeEnum {
-  LATCH_MODE_UP = 0,
-  LATCH_MODE_DOWN = 1
+  LATCH_MODE_UP = 0,  // nCS goes UP for triggering SPI latch
+  LATCH_MODE_DOWN = 1 // nCS goes DOWN for triggering SPI latch
 } SpiLatchModeEnum;
 
 typedef enum ReportDataEnum {
@@ -148,165 +138,222 @@ typedef enum ReportTypeEnum {
   REPORT_GENERIC_INPUT_OUTPUT = 0xA3,
 } ReportTypeEnum;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
-  uint8_t ReleaseType;
-  uint8_t ReleaseMajor;
-  uint8_t ReleaseMinor;
-  uint8_t ReleasePatch;
-} PACKED_ATTR FirmwareVersionTypeDef;
-PACKED_STRUCT_END
+typedef struct __attribute__((packed)) {
+  uint8_t ReleaseType;  // See FirmwareReleaseTypeEnum for possible types
+  uint8_t ReleaseMajor; // Change to the year of the release
+  uint8_t ReleaseMinor; // Introduce new version of firmware when new version of
+                        // companion app is needed
+  uint8_t ReleasePatch; // Increment on each patch in scope of the same version
+} FirmwareVersionTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
   FirmwareVersionTypeDef FirmwareVersion;
   uint32_t SerialKey[3];
   uint32_t DeviceId[3];
-  uint8_t IsRegistered;
-  uint8_t _padding[35];
-} PACKED_ATTR FirmwareLicenseTypeDef;
-PACKED_STRUCT_END
+  uint8_t IsRegistered; // Value is 0 or 1 as representation of boolean flag
+  uint8_t _padding[35]; // TODO:IMPORTANT! Keep size 64b. Report size must be
+                        // same size as in descriptor otherwise Windows will
+                        // drop the packet as corrupted
+} FirmwareLicenseTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
-  uint16_t MotionRange;
-  uint16_t StaticDampeningStrength;
-  uint16_t SoftStopDampeningStrength;
-  uint8_t TotalEffectStrength;
-  uint8_t IntegratedSpringStrength;
-  uint8_t SoftStopRange;
-  uint8_t SoftStopStrength;
-  int8_t DirectXConstantDirection;
-  uint8_t DirectXSpringStrength;
-  uint8_t DirectXConstantStrength;
-  uint8_t DirectXPeriodicStrength;
-  uint16_t DynamicDampeningStrength;
-  uint8_t _padding[48];
-} PACKED_ATTR EffectSettingsTypeDef;
-PACKED_STRUCT_END
+typedef struct __attribute__((packed)) {
+  uint16_t MotionRange;               // Degrees
+  uint16_t StaticDampeningStrength;   // 0 to 100 in %.
+  uint16_t SoftStopDampeningStrength; // 0 to 100 in %.
+  uint8_t TotalEffectStrength;        // 0 to 100 in %.
+  uint8_t IntegratedSpringStrength;   // 0 to 100 in %.
+  uint8_t SoftStopRange;    // Degrees (will be added on top of MotionRange)
+  uint8_t SoftStopStrength; // 0 to 100 in %.
+  int8_t DirectXConstantDirection; // -1 or +1
+  uint8_t DirectXSpringStrength;   // 0 to 100 in %.
+  uint8_t DirectXConstantStrength; // 0 to 100 in %.
+  uint8_t DirectXPeriodicStrength; // 0 to 100 in %.
+  uint8_t _padding[50]; // TODO:IMPORTANT! Keep size 64b. Report size must be
+                        // same size as in descriptor otherwise Windows will
+                        // drop the packet as corrupted
+} EffectSettingsTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
+typedef struct __attribute__((packed)) {
   uint16_t EncoderCPR;
   uint16_t IntegralGain;
   uint8_t ProportionalGain;
-  uint8_t ForceEnabled;
-  uint8_t DebugTorque;
-  uint8_t AmplifierGain;
-  uint8_t CalibrationMagnitude;
-  uint8_t CalibrationSpeed;
-  uint8_t PowerLimit;
-  uint8_t BrakingLimit;
-  uint8_t PositionSmoothing;
+  uint8_t ForceEnabled;  // Expect this value to be 0 or 1 as representation of
+                         // boolean flag
+  uint8_t DebugTorque;   // Expect this value to be 0 or 1 as representation of
+                         // boolean flag
+  uint8_t AmplifierGain; // See AmplifierGainEnum
+  uint8_t CalibrationMagnitude; // 0 to 100 in %.
+  uint8_t CalibrationSpeed;     // 0 to 100 in %.
+  uint8_t PowerLimit;           // 0 to 100 in %.
+  uint8_t BrakingLimit;         // 0 to 100 in %.
+  uint8_t PositionSmoothing;    // 0 to 100 in %.
   uint8_t SpeedBufferSize;
-  int8_t EncoderDirection;
-  int8_t ForceDirection;
+  int8_t EncoderDirection; // Expect this value to be -1 or +1
+  int8_t ForceDirection;   // Expect this value to be -1 or +1
   uint8_t PolePairs;
-  uint8_t _padding[47];
-} PACKED_ATTR HardwareSettingsTypeDef;
-PACKED_STRUCT_END
-
-PACKED_STRUCT_BEGIN
-typedef struct {
+  uint8_t _padding[47]; // TODO:IMPORTANT! Keep size 64b. Report size must be
+                        // same size as in descriptor otherwise Windows will
+                        // drop the packet as corrupted
+} HardwareSettingsTypeDef;
+typedef struct __attribute__((packed)) {
   uint16_t RAxisMin[3];
   uint16_t RAxisMax[3];
-  uint8_t RAxisSmoothing[3];
-  uint8_t RAxisToButtonLow[3];
-  uint8_t RAxisToButtonHigh[3];
-  uint8_t RAxisInvert[3];
-  uint8_t _padding[40];
-} PACKED_ATTR AdcExtensionSettingsTypeDef;
-PACKED_STRUCT_END
+  uint8_t RAxisSmoothing[3];   // Divide by 100 to get normalized ratio (0..1)
+  uint8_t RAxisToButtonLow[3]; // Point in % where button on axis lower value is
+                               // triggered. If 0 disabled
+  uint8_t RAxisToButtonHigh[3]; // Point in % where button on axis upper value
+                                // is triggered. If 100 disabled
+  uint8_t RAxisInvert[3];       // 0 or 1 boolean
+  uint8_t _padding[40]; // TODO:IMPORTANT! Keep size 64b. Report size must be
+                        // same size as in descriptor otherwise Windows will
+                        // drop the packet as corrupted
+} AdcExtensionSettingsTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
-  uint8_t ExtensionMode;
-  uint8_t PinMode[10];
-  uint8_t ButtonMode[32];
-  uint8_t SpiMode;
-  uint8_t SpiLatchMode;
-  uint8_t SpiLatchDelay;
-  uint8_t SpiClkPulseLength;
-  uint8_t _padding[17];
-} PACKED_ATTR GpioExtensionSettingsTypeDef;
-PACKED_STRUCT_END
+typedef struct __attribute__((packed)) {
+  uint8_t ExtensionMode;     // See ExtensionModeEnum
+  uint8_t PinMode[10];       // See PinModeEnum
+  uint8_t ButtonMode[32];    // See ButtonModeEnum
+  uint8_t SpiMode;           // See SpiModeEnum
+  uint8_t SpiLatchMode;      // See SpiLatchModeEnum
+  uint8_t SpiLatchDelay;     // In microseconds
+  uint8_t SpiClkPulseLength; // In microseconds
+  uint8_t _padding[17]; // TODO:IMPORTANT! Keep size 64b. Report size must be
+                        // same size as in descriptor otherwise Windows will
+                        // drop the packet as corrupted
+} GpioExtensionSettingsTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
+/**
+ * USB report that represent direct control initiated by host side.
+ * Device will be constantly listening for this reports on vendor interface.
+ * When device do not receive data for extended period of time it will switch to
+ * default functioning mode depending on activated device type.
+ * */
+typedef struct __attribute__((packed)) {
+
+  // Value represents normalized range from -1 to +1 multiplied by 10000 to get
+  // 4 fractional digit precision. Represents strength of the spring that will
+  // be acting in direction opposite wheel rotation and proportional to deegre
+  // on which wheel is moved from the center position. Min value: -10000 Max
+  // value: +10000 Default value: 0
   int16_t SpringForce;
+
+  // Value represents normalized range from -1 to +1 multiplied by 10000 to get
+  // 4 fractional digit precision. Represent strength of force that tries to
+  // move the wheel from current position in one direction or another. Min
+  // value: -10000 Max value: +10000 Default value: 0
   int16_t ConstantForce;
+
+  // Value represents normalized range from -1 to +1 multiplied by 10000 to get
+  // 4 fractional digit precision. Separate channel for the force where periodic
+  // effect can be sent to device. This effect is not affected by dampening as
+  // spring or constant effect. Min value: -10000 Max value: +10000 Default
+  // value: 0
   int16_t PeriodicForce;
+
+  // Value represents INVERSE ratio normalized range from 0 to +1 multiplied by
+  // 100 to get 2 fractional digit precision. Parameter will scale down DirectX
+  // forces excluding periodic and dampening. Direct control forces are not
+  // affected. IMPORTANT: TotalForce = InitialForce * (1 - ForceDrop / 100). Min
+  // value: 0 Max value: +100 Default value: 0
   uint8_t ForceDrop;
-} PACKED_ATTR DirectControlTypeDef;
-PACKED_STRUCT_END
 
-PACKED_STRUCT_BEGIN
-typedef struct {
+} DirectControlTypeDef;
+
+/**
+ * USB report that represents device state.
+ * Device will be constantly sending interrupt report with the state on vendor
+ * interface when device is active both for premium and free license.
+ */
+typedef struct __attribute__((packed)) {
+
+  // Version of firmware that device is running
   FirmwareVersionTypeDef FirmwareVersion;
+
+  // Value is 0 or 1 as representation of boolean flag.
+  // Will be determined on the fly for each report.
   uint8_t IsRegistered;
+
+  // Value represents normalized range from -1 to +1 multiplied by 10000 to get
+  // 4 fractional digit precision. Min value: -10000 Max value: +10000
   int16_t Position;
+
+  // Value represents normalized range from -1 to +1 multiplied by 10000 to get
+  // 4 fractional digit precision. Min value: -10000 Max value: +10000
   int16_t Torque;
+
+  // TODO:IMPORTANT! Keep size 64b. Report size must be same size as in
+  // descriptor otherwise Windows will drop the packet as corrupted
   uint8_t _padding[55];
-} PACKED_ATTR DeviceStateTypeDef;
-PACKED_STRUCT_END
 
-PACKED_STRUCT_BEGIN
-typedef struct {
-  uint8_t ReportId;
+} DeviceStateTypeDef;
+
+/**
+ * USB report for all generic communication on vendor interface.
+ * */
+typedef struct __attribute__((packed)) {
+  uint8_t ReportId; // REPORT_GENERIC_INPUT_OUTPUT
   uint8_t Buffer[64];
-} PACKED_ATTR HidInOutReportTypeDef;
-PACKED_STRUCT_END
+} HidInOutReportTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
-  uint8_t ReportData;
+/**
+ * USB report content representing data packet in generic communication report.
+ * */
+typedef struct __attribute__((packed)) {
+  uint8_t ReportData; // One of ReportDataEnum
   uint8_t Buffer[63];
-} PACKED_ATTR DataReportTypeDef;
-PACKED_STRUCT_END
+} DataReportTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
-  uint8_t Index;
-  uint8_t Buffer[61];
-} PACKED_ATTR FieldValueTypeDef;
-PACKED_STRUCT_END
+/**
+ * Data representing single settings
+ * */
+typedef struct __attribute__((packed)) {
+  uint8_t Index;      // 0 for non indexed settings or index of value in case of
+                      // array based settings
+  uint8_t Buffer[61]; // One of settings value type wrappers
+} FieldValueTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
-  uint8_t FieldId;
+/**
+ * Data representing single setttings fields
+ * */
+typedef struct __attribute__((packed)) {
+  uint8_t FieldId; // One of SettingsFieldEnum
   FieldValueTypeDef Value;
-} PACKED_ATTR FieldDataTypeDef;
-PACKED_STRUCT_END
+} FieldDataTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
+/**
+ * Type wrapper for float settings value
+ * */
+typedef struct __attribute__((packed)) {
   float Value;
-} PACKED_ATTR FloatValueWrapperTypeDef;
-PACKED_STRUCT_END
+} FloatValueWrapperTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
+/**
+ * Type wrapper for uint8_t settings value
+ * */
+typedef struct __attribute__((packed)) {
   uint8_t Value;
-} PACKED_ATTR UInt8ValueWrapperTypeDef;
-PACKED_STRUCT_END
+} UInt8ValueWrapperTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
+/**
+ * Type wrapper for int8_t settings value
+ * */
+typedef struct __attribute__((packed)) {
   int8_t Value;
-} PACKED_ATTR Int8ValueWrapperTypeDef;
-PACKED_STRUCT_END
+} Int8ValueWrapperTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
+/**
+ * Type wrapper for uint16_t settings value
+ * */
+typedef struct __attribute__((packed)) {
   uint16_t Value;
-} PACKED_ATTR UInt16ValueWrapperTypeDef;
-PACKED_STRUCT_END
+} UInt16ValueWrapperTypeDef;
 
-PACKED_STRUCT_BEGIN
-typedef struct {
+/**
+ * Type wrapper for int16_t settings value
+ * */
+typedef struct __attribute__((packed)) {
   int16_t Value;
-} PACKED_ATTR Int16ValueWrapperTypeDef;
-PACKED_STRUCT_END
+} Int16ValueWrapperTypeDef;
 
 class WheelApi {
 public:

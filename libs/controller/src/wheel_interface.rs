@@ -1,4 +1,6 @@
-use crate::models::{AdcSettings, EffectSettings, GpioSettings, HardwareSettings, WheelStatus};
+use crate::models::{
+    AdcSettings, EffectSettings, GpioSettings, HardwareSettingId, HardwareSettings, WheelStatus,
+};
 use anyhow::Result;
 
 pub trait WheelInterface: Send + Sync {
@@ -12,7 +14,12 @@ pub trait WheelInterface: Send + Sync {
     fn read_adc_settings(&self) -> Result<AdcSettings>;
 
     fn send_effect_settings(&self, settings: EffectSettings) -> Result<()>;
-    fn send_hardware_settings(&self, settings: HardwareSettings) -> Result<()>;
+    fn update_hardware_setting(
+        &self,
+        field_id: HardwareSettingId,
+        index: u8,
+        data: Vec<u8>,
+    ) -> Result<()>;
     fn send_gpio_settings(&self, settings: GpioSettings) -> Result<()>;
     fn send_adc_settings(&self, settings: AdcSettings) -> Result<()>;
 

@@ -5,7 +5,9 @@ pub mod storage;
 use crate::models::WheelProfile;
 
 use crate::storage::{SqliteStorage, StorageBackend};
-use ffbeast_controller::{EffectSettings, HardwareService, HardwareSettings, WheelInterface};
+use ffbeast_controller::{
+    EffectSettings, HardwareService, HardwareSettingId, HardwareSettings, WheelInterface,
+};
 use sodevs_input_manager::{InputManager, KeyMapping, Profile};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -40,17 +42,6 @@ fn update_effect_settings(
 ) -> Result<(), String> {
     hardware
         .send_effect_settings(settings)
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-#[instrument(skip(hardware), err)]
-fn update_hardware_settings(
-    hardware: State<'_, Arc<HardwareService>>,
-    settings: HardwareSettings,
-) -> Result<(), String> {
-    hardware
-        .send_hardware_settings(settings)
         .map_err(|e| e.to_string())
 }
 
@@ -293,15 +284,21 @@ fn apply_wheel_settings_to_hardware(
         .map_err(|e| e.to_string())?;
 
     // Read and update hardware settings
-    let mut current_hw = _hardware
-        .read_hardware_settings()
+    _hardware
+        .update_hardware_setting(HardwareSettingId::PowerLimit, 0, vec![settings.power_limit])
         .map_err(|e| e.to_string())?;
-    current_hw.power_limit = settings.power_limit;
-    current_hw.braking_limit = settings.braking_limit;
-    current_hw.force_direction = if settings.invert_game_force { 1 } else { 0 };
 
     _hardware
-        .send_hardware_settings(current_hw)
+        .update_hardware_setting(
+            HardwareSettingId::BrakingLimit,
+            0,
+            vec![settings.braking_limit],
+        )
+        .map_err(|e| e.to_string())?;
+
+    let force_dir: i8 = if settings.invert_game_force { -1 } else { 1 };
+    _hardware
+        .update_hardware_setting(HardwareSettingId::ForceInvert, 0, vec![force_dir as u8])
         .map_err(|e| e.to_string())?;
 
     // Persist to flash
@@ -443,7 +440,6 @@ pub fn run() {
             reset_center,
             reboot_device,
             update_effect_settings,
-            update_hardware_settings,
             get_effect_settings,
             get_hardware_settings,
             save_settings_to_hardware,

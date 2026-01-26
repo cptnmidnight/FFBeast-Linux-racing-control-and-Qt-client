@@ -11,6 +11,7 @@ import { t } from '../i18n';
 import { useLogStore } from './logs';
 
 import type { KeyMapping } from '@shared/models/KeyMapping';
+import { HardwareSettingId } from '../models/HardwareSettingId';
 
 export const useHardwareStore = defineStore('hardware', {
     state: () => ({
@@ -104,8 +105,27 @@ export const useHardwareStore = defineStore('hardware', {
         async updateFX(newFx: Partial<EffectSettings>) {
             if (!this.effects) return;
             this.effects = { ...this.effects, ...newFx };
-            await HardwareService.updateEffectSettings(this.effects);
+            // await HardwareService.updateEffectSettings(this.effects);
             this.hasUnsavedChanges = true;
+        },
+
+        async updateFXField(fieldId: HardwareSettingId, index: number, value: number, isU16: boolean = false) {
+            if (!this.effects) return;
+
+            let data: number[];
+            if (isU16) {
+                data = [value & 0xFF, (value >> 8) & 0xFF];
+            } else {
+                data = [value & 0xFF];
+            }
+
+            try {
+                // Use update_hardware_setting command for individual effect fields too
+                await HardwareService.updateHardwareSetting(fieldId, index, data);
+            } catch (err) {
+                console.error('Failed to update effect field:', err);
+                this.lastError = 'Failed to update effect field';
+            }
         },
 
         async updateHW(newHw: Partial<HardwareSettings>) {
@@ -117,8 +137,26 @@ export const useHardwareStore = defineStore('hardware', {
             }
 
             this.hardware = { ...this.hardware, ...newHw };
-            await HardwareService.updateHardwareSettings(this.hardware);
+            // await HardwareService.updateHardwareSettings(this.hardware);
             this.hasUnsavedChanges = true;
+        },
+
+        async updateHWField(fieldId: HardwareSettingId, index: number, value: number, isU16: boolean = false) {
+            if (!this.hardware) return;
+
+            let data: number[];
+            if (isU16) {
+                // Little Endian
+                data = [value & 0xFF, (value >> 8) & 0xFF];
+            } else {
+                data = [value & 0xFF];
+            }
+
+            try {
+                await HardwareService.updateHardwareSetting(fieldId, index, data);
+            } catch (e) {
+                console.error(`Failed to update field ${fieldId}: ${e}`);
+            }
         },
 
         async reboot() {
@@ -201,7 +239,7 @@ export const useHardwareStore = defineStore('hardware', {
         async updateGPIO(newGpio: Partial<GpioSettings>) {
             if (!this.gpio) return;
             this.gpio = { ...this.gpio, ...newGpio };
-            await HardwareService.updateGpioSettings(this.gpio);
+            // await HardwareService.updateGpioSettings(this.gpio);
             this.hasUnsavedChanges = true;
             this.rebootRequired = true;
         },
@@ -209,7 +247,7 @@ export const useHardwareStore = defineStore('hardware', {
         async updateADC(newAdc: Partial<AdcSettings>) {
             if (!this.adc) return;
             this.adc = { ...this.adc, ...newAdc };
-            await HardwareService.updateAdcSettings(this.adc);
+            // await HardwareService.updateAdcSettings(this.adc);
             this.hasUnsavedChanges = true;
         },
 

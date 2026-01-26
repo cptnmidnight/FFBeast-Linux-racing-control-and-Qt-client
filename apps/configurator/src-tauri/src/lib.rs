@@ -1,5 +1,6 @@
 use ffbeast_controller::{
-    AdcSettings, EffectSettings, GpioSettings, HardwareService, HardwareSettings, WheelInterface,
+    AdcSettings, EffectSettings, GpioSettings, HardwareService, HardwareSettingId,
+    HardwareSettings, WheelInterface,
 };
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, OnceLock};
@@ -165,12 +166,14 @@ fn update_effect_settings(
 
 #[tauri::command]
 #[instrument(skip(hardware), err)]
-fn update_hardware_settings(
+fn update_hardware_setting(
     hardware: State<'_, Arc<HardwareService>>,
-    settings: HardwareSettings,
+    field_id: u8,
+    index: u8,
+    data: Vec<u8>,
 ) -> Result<(), String> {
     hardware
-        .send_hardware_settings(settings)
+        .update_hardware_setting(HardwareSettingId::from(field_id), index, data)
         .map_err(|e| e.to_string())
 }
 
@@ -404,7 +407,7 @@ pub fn run() {
             get_gpio_settings,
             get_adc_settings,
             update_effect_settings,
-            update_hardware_settings,
+            update_hardware_setting,
             update_gpio_settings,
             update_adc_settings,
             activate_license,

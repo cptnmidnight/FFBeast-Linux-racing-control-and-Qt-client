@@ -1,5 +1,5 @@
 use crate::models::WheelProfile;
-use ffbeast_controller::{HardwareService, WheelInterface};
+use ffbeast_controller::{HardwareService, HardwareSettingId, WheelInterface};
 use std::process::Child;
 use std::sync::Arc;
 use std::thread;
@@ -19,7 +19,16 @@ impl ProfileWatcher {
         if let Some(p) = profile {
             info!("Watcher: Applying game profile: {}", p.name);
             let _ = hardware.send_effect_settings(p.to_effect_settings());
-            let _ = hardware.send_hardware_settings(p.to_hardware_settings());
+            let _ = hardware.update_hardware_setting(
+                HardwareSettingId::PowerLimit,
+                0,
+                vec![p.power_limit],
+            );
+            let _ = hardware.update_hardware_setting(
+                HardwareSettingId::BrakingLimit,
+                0,
+                vec![p.braking_limit],
+            );
         }
 
         thread::spawn(move || {
@@ -28,7 +37,16 @@ impl ProfileWatcher {
 
             info!("Watcher: Game closed. Restoring default profile...");
             let _ = hardware.send_effect_settings(default_profile.to_effect_settings());
-            let _ = hardware.send_hardware_settings(default_profile.to_hardware_settings());
+            let _ = hardware.update_hardware_setting(
+                HardwareSettingId::PowerLimit,
+                0,
+                vec![default_profile.power_limit],
+            );
+            let _ = hardware.update_hardware_setting(
+                HardwareSettingId::BrakingLimit,
+                0,
+                vec![default_profile.braking_limit],
+            );
         });
     }
 }

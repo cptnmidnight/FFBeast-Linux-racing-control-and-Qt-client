@@ -13,14 +13,14 @@
           :label="$t('settings.power_limit')" 
           value-suffix="%"
           help-key="help.power_limit"
-          @update:model-value="saveHardware"
+          @change="saveHardware(HardwareSettingId.PowerLimit)"
         />
         <ThemedSlider 
           v-model="hardware.braking_limit" 
           :label="$t('settings.braking_limit')" 
           value-suffix="%"
           help-key="help.braking_limit"
-          @update:model-value="saveHardware"
+          @change="saveHardware(HardwareSettingId.BrakingLimit)"
         />
         <ThemedSlider 
           v-model="hardware.amplifier_gain" 
@@ -28,7 +28,7 @@
           value-suffix="%"
           :max="500" 
           help-key="help.amplifier_gain"
-          @update:model-value="saveHardware"
+          @change="saveHardware(HardwareSettingId.AmplifierGain)"
         />
       </BaseCard>
 
@@ -39,14 +39,14 @@
           :label="$t('settings.encoder_cpr')" 
           :min="1" 
           :max="65535" 
-          @update:model-value="saveHardware"
+          @change="saveHardware(HardwareSettingId.EncoderCPR, true)"
         />
         <ThemedSlider 
           v-model="hardware.speed_buffer_size" 
           :label="$t('settings.speed_buffer')" 
           :min="1" 
           :max="255" 
-          @update:model-value="saveHardware"
+          @change="saveHardware(HardwareSettingId.SpeedBufferSize)"
         />
         <ThemedSlider 
           v-model="hardware.position_smoothing" 
@@ -54,7 +54,7 @@
           value-suffix="%"
           :max="255"
           help-key="help.position_smoothing"
-          @update:model-value="saveHardware"
+          @change="saveHardware(HardwareSettingId.PositionSmoothing)"
         />
       </BaseCard>
 
@@ -66,26 +66,26 @@
           :min="1" 
           :max="50" 
           help-key="help.pole_pairs"
-          @update:model-value="saveHardware"
+          @change="saveHardware(HardwareSettingId.PolePairs)"
         />
         <div class="switch-group">
           <ThemedSwitch 
             v-model="encoderDir" 
             :label="$t('settings.encoder_dir')" 
             help-key="help.encoder_direction"
-            @change="handleSwitches"
+            @change="saveHardware(HardwareSettingId.EncoderDirection)"
           />
           <ThemedSwitch 
             v-model="forceDir" 
             :label="$t('settings.force_dir')" 
             help-key="help.force_direction"
-            @change="handleSwitches"
+            @change="saveHardware(HardwareSettingId.ForceInvert)"
           />
           <ThemedSwitch 
             v-model="debugTorque" 
             :label="$t('settings.debug_torque')" 
             help-key="help.debug_torque"
-            @change="handleSwitches"
+            @change="saveHardware(HardwareSettingId.DebugTorque)"
           />
         </div>
       </BaseCard>
@@ -97,14 +97,14 @@
           :label="$t('settings.calibration_speed')" 
           value-suffix="%"
           help-key="help.calibration_speed"
-          @update:model-value="saveHardware"
+          @change="saveHardware(HardwareSettingId.CalibrationSpeed)"
         />
         <ThemedSlider 
           v-model="hardware.calibration_magnitude" 
           :label="$t('settings.calibration_magnitude')" 
           value-suffix="%"
           help-key="help.calibration_magnitude"
-          @update:model-value="saveHardware"
+          @change="saveHardware(HardwareSettingId.CalibrationMagnitude)"
         />
       </BaseCard>
 
@@ -116,14 +116,14 @@
           :label="$t('settings.p_gain')" 
           :max="2000" 
           help-key="help.proportional_gain"
-          @update:model-value="saveHardware"
+          @change="saveHardware(HardwareSettingId.PGain)"
         />
         <ThemedSlider 
           v-model="hardware.integral_gain" 
           :label="$t('settings.i_gain')" 
           :max="1000" 
           help-key="help.integral_gain"
-          @update:model-value="saveHardware"
+          @change="saveHardware(HardwareSettingId.IGain, true)"
         />
       </BaseCard>
     </div>
@@ -137,6 +137,7 @@ import { useHardwareStore } from '../../stores/hardware';
 import BaseCard from '../common/BaseCard.vue';
 import ThemedSlider from '@shared/components/atoms/ThemedSlider.vue';
 import ThemedSwitch from '@shared/components/atoms/ThemedSwitch.vue';
+import { HardwareSettingId } from '../../models/HardwareSettingId';
 
 const store = useHardwareStore();
 
@@ -173,14 +174,40 @@ const syncFromStore = () => {
 onMounted(syncFromStore);
 watch(() => store.hardware, syncFromStore, { deep: true });
 
-const saveHardware = () => {
-  store.updateHW({
+const saveHardware = (fieldId?: number, isU16: boolean = false) => {
+  const currentHW = {
     ...hardware,
     force_enabled: ffbEnabled.value ? 1 : 0,
-    encoder_direction: encoderDir.value ? 1 : 0,
-    force_direction: forceDir.value ? 1 : 0,
+    encoder_direction: encoderDir.value ? 1 : -1,
+    force_direction: forceDir.value ? 1 : -1,
     debug_torque: debugTorque.value ? 1 : 0,
-  });
+  };
+
+  if (fieldId !== undefined) {
+    let value = 0;
+    // Map fieldId to value
+    switch (fieldId) {
+      case HardwareSettingId.EncoderCPR: value = currentHW.encoder_cpr; break;
+      case HardwareSettingId.IGain: value = currentHW.integral_gain; break;
+      case HardwareSettingId.PGain: value = currentHW.proportional_gain; break;
+      case HardwareSettingId.ForceEnabled: value = currentHW.force_enabled; break;
+      case HardwareSettingId.DebugTorque: value = currentHW.debug_torque; break;
+      case HardwareSettingId.AmplifierGain: value = currentHW.amplifier_gain; break;
+      case HardwareSettingId.CalibrationMagnitude: value = currentHW.calibration_magnitude; break;
+      case HardwareSettingId.CalibrationSpeed: value = currentHW.calibration_speed; break;
+      case HardwareSettingId.PowerLimit: value = currentHW.power_limit; break;
+      case HardwareSettingId.BrakingLimit: value = currentHW.braking_limit; break;
+      case HardwareSettingId.PositionSmoothing: value = currentHW.position_smoothing; break;
+      case HardwareSettingId.SpeedBufferSize: value = currentHW.speed_buffer_size; break;
+      case HardwareSettingId.EncoderDirection: value = currentHW.encoder_direction; break;
+      case HardwareSettingId.ForceInvert: value = currentHW.force_direction; break;
+      case HardwareSettingId.PolePairs: value = currentHW.pole_pairs; break;
+    }
+    store.updateHWField(fieldId, 0, value, isU16);
+  }
+
+  // Update store state without triggering a full hardware send
+  store.updateHW(currentHW);
 };
 
 const handleSwitches = () => {
@@ -189,7 +216,7 @@ const handleSwitches = () => {
 
 const toggleFFB = async (val: boolean) => {
   ffbEnabled.value = val;
-  saveHardware();
+  saveHardware(HardwareSettingId.ForceEnabled);
 };
 </script>
 

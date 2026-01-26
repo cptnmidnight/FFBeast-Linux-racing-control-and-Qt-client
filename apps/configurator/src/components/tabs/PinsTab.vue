@@ -23,6 +23,8 @@ import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useHardwareStore } from '../../stores/hardware';
 import ThemedSelect from '@shared/components/atoms/ThemedSelect.vue';
+import { HardwareSettingId } from '../../models/HardwareSettingId';
+import { PinMode } from '../../models/ProtocolEnums';
 
 const store = useHardwareStore();
 const { t } = useI18n();
@@ -31,17 +33,17 @@ const pinModes = computed(() => store.gpio?.pin_mode ?? new Array(10).fill(0));
 const isConnected = computed(() => store.isConnected);
 
 const modeOptions = [
-  { label: 'pins.modes.none', value: 0 },
-  { label: 'pins.modes.gpio', value: 1 },
-  { label: 'pins.modes.analog', value: 2 },
-  { label: 'pins.modes.spi_cs', value: 3 },
-  { label: 'pins.modes.spi_sck', value: 4 },
-  { label: 'pins.modes.spi_miso', value: 5 },
-  { label: 'pins.modes.enable_effects', value: 6 },
-  { label: 'pins.modes.center_reset', value: 7 },
-  { label: 'pins.modes.braking_pwm', value: 8 },
-  { label: 'pins.modes.effect_led', value: 9 },
-  { label: 'pins.modes.reboot', value: 10 },
+  { label: 'pins.modes.none', value: PinMode.None },
+  { label: 'pins.modes.gpio', value: PinMode.Gpio },
+  { label: 'pins.modes.analog', value: PinMode.Analog },
+  { label: 'pins.modes.spi_cs', value: PinMode.SpiCs },
+  { label: 'pins.modes.spi_sck', value: PinMode.SpiSck },
+  { label: 'pins.modes.spi_miso', value: PinMode.SpiMiso },
+  { label: 'pins.modes.enable_effects', value: PinMode.EnableEffects },
+  { label: 'pins.modes.center_reset', value: PinMode.CenterReset },
+  { label: 'pins.modes.braking_pwm', value: PinMode.BrakingPwm },
+  { label: 'pins.modes.effect_led', value: PinMode.EffectLed },
+  { label: 'pins.modes.reboot', value: PinMode.Reboot },
 ];
 
 const translatedModeOptions = computed(() => 
@@ -56,6 +58,9 @@ const updatePinMode = async (index: number, value: string | number) => {
   newModes[index] = numValue;
   
   try {
+    // Send individual field update for Pin Mode (Field 28)
+    await store.updateHWField(HardwareSettingId.PinMode, index, numValue);
+    
     await store.updateGPIO({
       pin_mode: newModes
     });

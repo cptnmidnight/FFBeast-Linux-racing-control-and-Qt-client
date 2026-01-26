@@ -11,14 +11,14 @@
           :step="10" 
           value-suffix="°" 
           help-key="help.motion_range"
-          @update:model-value="saveEffects"
+          @change="saveEffects(HardwareSettingId.MotionRange, true)"
         />
         <ThemedSlider 
           v-model="effects.total_effect_strength" 
           :label="$t('settings.total_strength')" 
           value-suffix="%"
           help-key="help.total_effect_strength"
-          @update:model-value="saveEffects"
+          @change="saveEffects(HardwareSettingId.TotalEffectStrength)"
         />
       </BaseCard>
 
@@ -29,7 +29,7 @@
           :label="$t('settings.soft_stop_strength')" 
           value-suffix="%"
           help-key="help.soft_stop_strength"
-          @update:model-value="saveEffects"
+          @change="saveEffects(HardwareSettingId.SoftStopStrength)"
         />
         <ThemedSlider 
           v-model="effects.soft_stop_range" 
@@ -37,15 +37,15 @@
           value-suffix="°"
           :max="255"
           help-key="help.soft_stop_range"
-          @update:model-value="saveEffects"
+          @change="saveEffects(HardwareSettingId.SoftStopRange)"
         />
         <ThemedSlider 
           v-model="effects.soft_stop_dampening_strength" 
           :label="$t('settings.soft_stop_dampening')" 
           value-suffix="%"
-          :max="1000"
+          :max="100"
           help-key="help.soft_stop_dampening"
-          @update:model-value="saveEffects"
+          @change="saveEffects(HardwareSettingId.SoftStopDampening)"
         />
       </BaseCard>
 
@@ -56,23 +56,23 @@
           :label="$t('settings.integrated_spring')" 
           value-suffix="%"
           help-key="help.integrated_spring_strength"
-          @update:model-value="saveEffects"
+          @change="saveEffects(HardwareSettingId.IntegratedSpring)"
         />
         <ThemedSlider 
           v-model="effects.static_dampening_strength" 
           :label="$t('settings.static_dampening')" 
           value-suffix="%"
-          :max="1000"
+          :max="100"
           help-key="help.static_dampening_strength"
-          @update:model-value="saveEffects"
+          @change="saveEffects(HardwareSettingId.StaticDampening, true)"
         />
         <ThemedSlider 
           v-model="effects.dynamic_dampening_strength" 
           :label="$t('settings.dynamic_dampening')" 
           value-suffix="%"
-          :max="1000"
+          :max="100"
           help-key="help.dynamic_dampening_strength"
-          @update:model-value="saveEffects"
+          @change="saveEffects(HardwareSettingId.DynamicDampening, true)"
         />
       </BaseCard>
 
@@ -83,21 +83,21 @@
           :label="$t('settings.dx_constant')" 
           value-suffix="%"
           help-key="help.direct_x_constant_strength"
-          @update:model-value="saveEffects"
+          @change="saveEffects(HardwareSettingId.DirectXConstant)"
         />
         <ThemedSlider 
           v-model="effects.direct_x_periodic_strength" 
           :label="$t('settings.dx_periodic')" 
           value-suffix="%"
           help-key="help.direct_x_periodic_strength"
-          @update:model-value="saveEffects"
+          @change="saveEffects(HardwareSettingId.DirectXPeriodic)"
         />
         <ThemedSlider 
           v-model="effects.direct_x_spring_strength" 
           :label="$t('settings.dx_spring')" 
           value-suffix="%"
           help-key="help.direct_x_spring_strength"
-          @update:model-value="saveEffects"
+          @change="saveEffects(HardwareSettingId.DirectXSpring)"
         />
         <ThemedSwitch 
           v-model="invertGameForce" 
@@ -117,6 +117,7 @@ import { useHardwareStore } from '../../stores/hardware';
 import BaseCard from '../common/BaseCard.vue';
 import ThemedSlider from '@shared/components/atoms/ThemedSlider.vue';
 import ThemedSwitch from '@shared/components/atoms/ThemedSwitch.vue';
+import { HardwareSettingId } from '../../models/HardwareSettingId';
 
 const store = useHardwareStore();
 
@@ -138,15 +139,36 @@ const effects = reactive({
 
 const invertGameForce = ref(effects.direct_x_constant_direction === 1);
 
-const saveEffects = () => {
-  store.updateFX({
+const saveEffects = (fieldId?: number, isU16: boolean = false) => {
+  const currentFX = {
     ...effects,
     direct_x_constant_direction: invertGameForce.value ? 1 : 0
-  });
+  };
+
+  if (fieldId !== undefined) {
+    let value = 0;
+    switch (fieldId) {
+      case HardwareSettingId.MotionRange: value = currentFX.motion_range; break;
+      case HardwareSettingId.TotalEffectStrength: value = currentFX.total_effect_strength; break;
+      case HardwareSettingId.SoftStopStrength: value = currentFX.soft_stop_strength; break;
+      case HardwareSettingId.SoftStopRange: value = currentFX.soft_stop_range; break;
+      case HardwareSettingId.SoftStopDampening: value = currentFX.soft_stop_dampening_strength; break;
+      case HardwareSettingId.IntegratedSpring: value = currentFX.integrated_spring_strength; break;
+      case HardwareSettingId.StaticDampening: value = currentFX.static_dampening_strength; break;
+      case HardwareSettingId.DynamicDampening: value = currentFX.dynamic_dampening_strength; break;
+      case HardwareSettingId.DirectXConstant: value = currentFX.direct_x_constant_strength; break;
+      case HardwareSettingId.DirectXPeriodic: value = currentFX.direct_x_periodic_strength; break;
+      case HardwareSettingId.DirectXSpring: value = currentFX.direct_x_spring_strength; break;
+      case HardwareSettingId.DirectXConstantDirection: value = currentFX.direct_x_constant_direction; break;
+    }
+    store.updateFXField(fieldId, 0, value, isU16);
+  }
+
+  store.updateFX(currentFX);
 };
 
 const handleInvert = () => {
-  saveEffects();
+  saveEffects(HardwareSettingId.DirectXConstantDirection);
 };
 
 // Sync back from store if it changes

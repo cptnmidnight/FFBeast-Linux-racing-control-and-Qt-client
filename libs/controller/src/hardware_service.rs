@@ -1,5 +1,7 @@
 use crate::gamepad_reader::{GamepadReader, create_gamepad_reader};
-use crate::models::{AdcSettings, EffectSettings, GpioSettings, HardwareSettings, WheelStatus};
+use crate::models::{
+    AdcSettings, EffectSettings, GpioSettings, HardwareSettingId, HardwareSettings, WheelStatus,
+};
 use crate::wheel_interface::WheelInterface;
 use anyhow::{Result, anyhow};
 use hidapi::{HidApi, HidDevice};
@@ -540,31 +542,14 @@ impl WheelInterface for HardwareService {
         Ok(())
     }
 
-    #[instrument(skip(self), err)]
-    fn send_hardware_settings(&self, settings: HardwareSettings) -> Result<()> {
-        // Send fields individually as per protocol reference (wheel_api_lib.js)
-        self.send_field(24, 0, (settings.encoder_cpr as u16).to_le_bytes().to_vec())?;
-        self.send_field(
-            26,
-            0,
-            (settings.integral_gain as u16).to_le_bytes().to_vec(),
-        )?;
-        self.send_field(25, 0, vec![settings.proportional_gain])?;
-        self.send_field(11, 0, vec![settings.force_enabled])?;
-        self.send_field(12, 0, vec![settings.debug_torque])?;
-        self.send_field(13, 0, vec![settings.amplifier_gain])?;
-        self.send_field(15, 0, vec![settings.calibration_magnitude])?;
-        self.send_field(16, 0, vec![settings.calibration_speed])?;
-        self.send_field(17, 0, vec![settings.power_limit])?;
-        self.send_field(18, 0, vec![settings.braking_limit])?;
-        self.send_field(19, 0, vec![settings.position_smoothing])?;
-        self.send_field(20, 0, vec![settings.speed_buffer_size])?;
-        // Cast i8 to u8 via bitcast (to_le_bytes handles it for u8/i8 implicitly or just cast)
-        self.send_field(21, 0, vec![settings.encoder_direction as u8])?;
-        self.send_field(22, 0, vec![settings.force_direction as u8])?;
-        self.send_field(23, 0, vec![settings.pole_pairs])?;
-
-        Ok(())
+    fn update_hardware_setting(
+        &self,
+        field_id: HardwareSettingId,
+        index: u8,
+        data: Vec<u8>,
+    ) -> Result<()> {
+        let id_u8: u8 = field_id.into();
+        self.send_field(id_u8, index, data)
     }
 
     #[instrument(skip(self), err)]

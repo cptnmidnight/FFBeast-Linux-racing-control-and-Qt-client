@@ -19,28 +19,30 @@
         <ThemedSelect 
           v-model="spiSettings.spi_mode" 
           :label="$t('settings.spi_mode')"
-          :options="spiModeOptions"
-          @change="saveSpi"
+          :options="translatedSpiModeOptions"
+          help-key="help.spi_mode"
+          @change="saveSpiField(HardwareSettingId.SpiMode)"
         />
         <ThemedSelect 
           v-model="spiSettings.spi_latch_mode" 
           :label="$t('settings.spi_latch')"
           :options="translatedLatchOptions"
-          @change="saveSpi"
+          help-key="help.latch_mode"
+          @change="saveSpiField(HardwareSettingId.SpiLatchMode)"
         />
         <ThemedSlider 
           v-model="spiSettings.spi_latch_delay" 
           :label="$t('settings.spi_latch_delay')"
           value-suffix="µs"
           help-key="help.spi_latch_delay"
-          @update:model-value="saveSpi"
+          @change="saveSpiField(HardwareSettingId.SpiLatchDelay)"
         />
         <ThemedSlider 
           v-model="spiSettings.spi_clk_pulse_length" 
           :label="$t('settings.spi_pulse')"
           value-suffix="µs"
           help-key="help.spi_pulse"
-          @update:model-value="saveSpi"
+          @change="saveSpiField(HardwareSettingId.SpiClkPulseLength)"
         />
       </div>
     </BaseCard>
@@ -79,6 +81,8 @@ import { useHardwareStore } from '../../stores/hardware';
 import ThemedSelect from '@shared/components/atoms/ThemedSelect.vue';
 import ThemedSlider from '@shared/components/atoms/ThemedSlider.vue';
 import BaseCard from '../common/BaseCard.vue';
+import { ExtensionMode } from '../../models/ProtocolEnums';
+import { HardwareSettingId } from '../../models/HardwareSettingId';
 
 const store = useHardwareStore();
 const { t } = useI18n();
@@ -93,12 +97,12 @@ const spiSettings = reactive({
 });
 
 const modeOptions = [
-  { label: 'modes.extension.none', value: 0 },
-  { label: 'modes.spi.custom', value: 1 },
-  { label: 'modes.spi.3xcd4021', value: 2 },
-  { label: 'modes.spi.3xsn74hc165', value: 3 },
-  { label: 'modes.extension.spi_tm', value: 4 },
-  { label: 'modes.spi.vpc', value: 5 },
+  { label: 'modes.extension.none', value: ExtensionMode.None },
+  { label: 'modes.spi.custom', value: ExtensionMode.SpiCustom },
+  { label: 'modes.spi.3xcd4021', value: ExtensionMode.Spi3xCD4021 },
+  { label: 'modes.spi.3xsn74hc165', value: ExtensionMode.Spi3xSN74HC165 },
+  { label: 'modes.extension.spi_tm', value: ExtensionMode.SpiTMStyle },
+  { label: 'modes.spi.vpc', value: ExtensionMode.SpiVPC },
 ];
 
 const translatedModeOptions = computed(() => 
@@ -106,23 +110,27 @@ const translatedModeOptions = computed(() =>
 );
 
 const spiModeOptions = [
-  { label: 'Mode 0', value: 0 },
-  { label: 'Mode 1', value: 1 },
-  { label: 'Mode 2', value: 2 },
-  { label: 'Mode 3', value: 3 },
+  { label: 'settings.spi_mode_0', value: 0 },
+  { label: 'settings.spi_mode_1', value: 1 },
+  { label: 'settings.spi_mode_2', value: 2 },
+  { label: 'settings.spi_mode_3', value: 3 },
 ];
 
 const latchOptions = [
-  { label: 'Latch UP', value: 0 },
-  { label: 'Latch DOWN', value: 1 },
+  { label: 'settings.latch_up', value: 0 },
+  { label: 'settings.latch_down', value: 1 },
 ];
 
 const translatedLatchOptions = computed(() => 
   latchOptions.map(opt => ({ ...opt, label: t(opt.label) }))
 );
 
+const translatedSpiModeOptions = computed(() => 
+  spiModeOptions.map(opt => ({ ...opt, label: t(opt.label) }))
+);
+
 const titleKeys = ['modes.extension.none', 'modes.spi.custom', 'modes.spi.3xcd4021', 'modes.spi.3xsn74hc165', 'modes.extension.spi_tm', 'modes.spi.vpc'];
-const detailKeys = ['none', 'custom', 'tm_style', '165_style', 'tm', 'vpc'];
+const detailKeys = ['none', 'custom', 'tm_style', 'style_165', 'tm', 'vpc'];
 
 const currentModeTitle = computed(() => titleKeys[extensionMode.value] || 'modes.extension.none');
 const currentModeDetail = computed(() => detailKeys[extensionMode.value] || 'none');
@@ -130,10 +138,22 @@ const currentModeDetail = computed(() => detailKeys[extensionMode.value] || 'non
 const handleModeChange = async (value: string | number) => {
   if (store.gpio) {
     const numValue = Number(value);
+    store.updateHWField(HardwareSettingId.ExtensionMode, 0, numValue);
     await store.updateGPIO({
       extension_mode: numValue
     });
   }
+};
+
+const saveSpiField = (fieldId: number) => {
+  let value = 0;
+  if (fieldId === HardwareSettingId.SpiMode) value = spiSettings.spi_mode;
+  if (fieldId === HardwareSettingId.SpiLatchMode) value = spiSettings.spi_latch_mode;
+  if (fieldId === HardwareSettingId.SpiLatchDelay) value = spiSettings.spi_latch_delay;
+  if (fieldId === HardwareSettingId.SpiClkPulseLength) value = spiSettings.spi_clk_pulse_length;
+  
+  store.updateHWField(fieldId, 0, value);
+  saveSpi();
 };
 
 const saveSpi = async () => {
