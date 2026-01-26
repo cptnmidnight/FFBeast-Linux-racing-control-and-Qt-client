@@ -210,10 +210,6 @@ const saveHardware = (fieldId?: number, isU16: boolean = false) => {
   store.updateHW(currentHW);
 };
 
-const handleSwitches = () => {
-  saveHardware();
-};
-
 const toggleFFB = async (val: boolean) => {
   ffbEnabled.value = val;
   saveHardware(HardwareSettingId.ForceEnabled);
