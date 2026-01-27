@@ -3,9 +3,11 @@ use ffbeast_controller::models::wheel_status::WheelStatus;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
+use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
-use tracing::{error, info, warn};
+use tracing::{info, warn};
+use directories::ProjectDirs;
 
 const CONFIG_FILE: &str = "keyboard_profiles.json";
 
@@ -70,19 +72,39 @@ impl InputManager {
         }
     }
 
+    pub fn from_saved_config() -> Self {
+        Self::new()
+    }
+
+    fn get_config_path() -> PathBuf {
+        if let Some(proj_dirs) = ProjectDirs::from("com", "sodevs", "InputManager") {
+            let base_dir = proj_dirs.config_dir(); // ~/.config/SODevsGameLauncher or AppData/Roaming/...
+            let path = base_dir.to_path_buf();           
+
+            if !path.exists() {
+                let _ = fs::create_dir_all(&path);
+            }
+            path.join(CONFIG_FILE)
+        } else {
+            PathBuf::from(CONFIG_FILE)
+        }
+    }
+
     fn load_config_from_disk() -> ManagerConfig {
-        if let Ok(content) = fs::read_to_string(CONFIG_FILE) {
+        let path = Self::get_config_path();
+        if let Ok(content) = fs::read_to_string(&path) {
             match serde_json::from_str::<ManagerConfig>(&content) {
                 Ok(cfg) => return cfg,
-                Err(e) => warn!("Failed to parse {}: {}", CONFIG_FILE, e),
+                Err(e) => warn!("Failed to parse {:?}: {}", path, e),
             }
         }
         ManagerConfig::default()
     }
 
     fn save_config_to_disk(config: &ManagerConfig) {
+        let path = Self::get_config_path();
         if let Ok(content) = serde_json::to_string_pretty(config) {
-            let _ = fs::write(CONFIG_FILE, content);
+            let _ = fs::write(&path, content);
         }
     }
 
@@ -90,12 +112,10 @@ impl InputManager {
 
     pub fn set_mappings(&self, new_mappings: Vec<KeyMapping>) {
         info!(
-            "InputManager: Setting active mappings (transient): {}",
+            "InputManager: Setting active mappings (PERSISTENT): {}",
             new_mappings.len()
         );
-        let mut m = self.active_mappings.lock().unwrap();
-        *m = new_mappings;
-        self.active_keys.lock().unwrap().clear();
+        self.update_active_mappings(new_mappings);
     }
 
     pub fn set_active(&self, active: bool) {
@@ -209,6 +229,7 @@ impl InputManager {
 
     // Allows updating the mappings of the current profile (or creates one)
     pub fn update_active_mappings(&self, mappings: Vec<KeyMapping>) {
+        self.release_all_keys();
         let mut config = self.config.lock().unwrap();
         // If we have an active profile, update it
         // If we have an active profile, update it
@@ -249,53 +270,78 @@ impl InputManager {
         };
 
         // ... same processing logic ...
+        // ... same processing logic ...
         let mut active_state = self.active_keys.lock().unwrap();
+        // let mut enigo_guard = self.enigo.lock().unwrap();
+        // Avoid keeping the lock for too long, but we need it to press keys
+        // We will lock it only when action is needed if possible? No, we need it to be mutable.
         let mut enigo_guard = self.enigo.lock().unwrap();
-
         let enigo = match enigo_guard.as_mut() {
             Some(e) => e,
-            None => return,
+            None => {
+                warn!("InputManager: Enigo instance not available");
+                return;
+            },
         };
 
         for map in inputs_to_process {
-            let is_triggered = match map.source_type.as_str() {
+            let was_triggered = active_state.contains(&map.id); // Check previous state
+            let mut is_triggered = false;
+
+            match map.source_type.as_str() {
                 "button" => {
-                    // Safer bitwise op
                     let idx = map.index;
                     if idx < 32 {
-                        (status.buttons & (1 << idx)) != 0
-                    } else {
-                        false
+                        is_triggered = (status.buttons & (1 << idx)) != 0;
                     }
                 }
                 "axis" => {
                     let val = status.adc.get(map.index).cloned().unwrap_or(0);
-                    // Scale 12-bit (0-4095) to 15-bit (0-32767)
+                    // Scale 12-bit (0-4095) to match common usage, previously scaling to 15-bit was confusing if threshold is %
+                    // Assuming threshold is also in 0-4095 scale or 0-100%?
+                    // The frontend sends raw values usually. Let's assume threshold is RAW 0-4095 for now based on typical usage.
+                    // If the original code scaled to 32767, let's keep it but LOG it.
                     let val_scaled = (val as i32 * 32767) / 4095;
-                    let thr = map.threshold.unwrap_or(2048);
+                    let thr = map.threshold.unwrap_or(16383); // ~50% of 32767
 
-                    match map.trigger.as_str() {
+                    let triggered = match map.trigger.as_str() {
                         "high" => val_scaled > thr,
                         "low" => val_scaled < thr,
-                        _ => false,
+                         _ => false,
+                    };
+
+                    // DEBUG LOGS FOR AXIS
+                    // Only log if state CHANGES or periodically? continuous logging kills perf.
+                    // Let's log only on edge detection later, or if it's suspected to differ from expected.
+                    // If the user wants to debug "why it is not triggering", we should log when it is CLOSE or any change?
+                    // For now, let's log transitions.
+
+                    if triggered != was_triggered {
+                        info!(
+                            "InputManager [Axis Debug] MapID: {}, Index: {}, Raw: {}, Scaled: {}, Threshold: {}, Trigger: {}, Result: {}",
+                            map.id, map.index, val, val_scaled, thr, map.trigger, triggered
+                        );
                     }
+                    is_triggered = triggered;
                 }
-                _ => false,
+                _ => {}
             };
 
-            let was_triggered = active_state.contains(&map.id);
             let map_key = &map.key;
-
-            if is_triggered && !was_triggered {
-                if let Some(vk) = parse_key(map_key) {
-                    let _ = enigo.key(vk, Direction::Press);
+            if let Some(key_parsed) = parse_key(map_key) {
+                 if is_triggered && !was_triggered {
+                    info!("InputManager: Pressing Key {} (Source: {}[{}]), ID: {}", map_key, map.source_type, map.index, map.id);
+                    let _ = enigo.key(key_parsed, Direction::Press);
+                    active_state.insert(map.id.clone());
+                } else if !is_triggered && was_triggered {
+                    info!("InputManager: Releasing Key {} (Source: {}[{}]), ID: {}", map_key, map.source_type, map.index, map.id);
+                    let _ = enigo.key(key_parsed, Direction::Release);
+                    active_state.remove(&map.id);
                 }
-                active_state.insert(map.id.clone());
-            } else if !is_triggered && was_triggered {
-                if let Some(vk) = parse_key(map_key) {
-                    let _ = enigo.key(vk, Direction::Release);
-                }
-                active_state.remove(&map.id);
+            } else {
+                 if is_triggered && !was_triggered {
+                     warn!("InputManager: Invalid key '{}' configured for ID {}", map_key, map.id);
+                 }
             }
         }
     }
@@ -336,5 +382,19 @@ pub fn parse_key(k: &str) -> Option<Key> {
             Some(Key::Unicode(ch.to_ascii_lowercase()))
         }
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_key() {
+        assert_eq!(parse_key("SPACE"), Some(Key::Space));
+        assert_eq!(parse_key("a"), Some(Key::Unicode('a')));
+        assert_eq!(parse_key("A"), Some(Key::Unicode('a'))); // checks lowercasing
+        assert_eq!(parse_key("F1"), Some(Key::F1));
+        assert!(parse_key("INVALID").is_none());
     }
 }

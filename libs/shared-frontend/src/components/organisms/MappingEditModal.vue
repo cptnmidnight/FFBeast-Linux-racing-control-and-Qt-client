@@ -121,7 +121,7 @@ const liveValue = computed(() => {
     const raw = hardwareStream.value.adc[props.axisIndex + 3] ?? 0;
     return Math.floor((raw * 32767) / 4095);
   }
-  return props.axisValue || 0;
+  return props.axisValue + 3 || 0;
 });
 
 // Local state

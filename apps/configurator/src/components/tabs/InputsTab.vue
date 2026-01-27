@@ -191,9 +191,9 @@ const pushKeyMappingsToBackend = async () => {
     // High threshold mapping
     if (mapping.keyHigh) {
       keyMappings.push({
-        id: `axis.${actualIndex}_high_${mapping.keyHigh}`,
+        id: `axis.${actualIndex + 3}_high_${mapping.keyHigh}`,
         source_type: 'axis',
-        index: actualIndex,
+        index: actualIndex + 3,
         trigger: 'high',
         key: mapping.keyHigh,
         threshold: mapping.thresholdHigh ?? 30000
@@ -203,9 +203,9 @@ const pushKeyMappingsToBackend = async () => {
     // Low threshold mapping
     if (mapping.keyLow) {
       keyMappings.push({
-        id: `axis.${actualIndex}_low_${mapping.keyLow}`,
+        id: `axis.${actualIndex + 3}_low_${mapping.keyLow}`,
         source_type: 'axis',
-        index: actualIndex,
+        index: actualIndex + 3,
         trigger: 'low',
         key: mapping.keyLow,
         threshold: mapping.thresholdLow ?? 2000

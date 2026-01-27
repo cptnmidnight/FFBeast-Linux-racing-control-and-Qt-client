@@ -387,7 +387,9 @@
         "test_notification": "This is a test toast notification! 🎉",
         "id_copied": "ID copied to clipboard",
         "activation_success": "License activated successfully!",
-        "feature_not_ready": "Feature not ready yet"
+        "feature_not_ready": "Feature not ready yet",
+        "service_stopped": "Service stopped",
+        "service_started": "Service started"
     },
     "dialogs": {
         "enter_dfu_confirm": "Are you sure you want to enter DFU mode? This is typically used for firmware updates.",

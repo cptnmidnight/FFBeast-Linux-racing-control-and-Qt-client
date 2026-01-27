@@ -389,7 +389,9 @@
         "test_notification": "Esta é uma notificação de teste! 🎉",
         "id_copied": "ID copiado para a área de transferência",
         "activation_success": "Licença ativada com sucesso!",
-        "feature_not_ready": "Funcionalidade ainda não disponível"
+        "feature_not_ready": "Funcionalidade ainda não disponível",
+        "service_stopped": "Serviço parado",
+        "service_started": "Serviço iniciado"
     },
     "dialogs": {
         "enter_dfu_confirm": "Tem certeza que deseja entrar em modo DFU? Isso é usado para atualizações de firmware.",

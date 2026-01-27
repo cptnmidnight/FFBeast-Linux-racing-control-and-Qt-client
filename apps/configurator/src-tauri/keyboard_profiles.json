@@ -1,0 +1,27 @@
+{
+  "active_profile_id": "default",
+  "profiles": [
+    {
+      "id": "default",
+      "name": "Default",
+      "mappings": [
+        {
+          "id": "axis.0_high",
+          "source_type": "axis",
+          "index": 0,
+          "trigger": "high",
+          "key": "E",
+          "threshold": 30000
+        },
+        {
+          "id": "axis.0_low",
+          "source_type": "axis",
+          "index": 0,
+          "trigger": "low",
+          "key": "B",
+          "threshold": 2464
+        }
+      ]
+    }
+  ]
+}
