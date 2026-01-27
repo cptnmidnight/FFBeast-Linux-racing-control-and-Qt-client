@@ -2,8 +2,8 @@ import type { KeyMapping } from './KeyMapping';
 
 export interface AxisMapping {
     name: string;
-    key_low: string;
-    key_high: string;
+    key: string;
+    button: string;
     threshold_low: number;
     threshold_high: number;
 }

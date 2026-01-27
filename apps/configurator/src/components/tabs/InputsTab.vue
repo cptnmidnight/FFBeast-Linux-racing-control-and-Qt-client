@@ -9,20 +9,18 @@
         v-model="axisNames[index]"
         :raw-value="getAxisValue(index)"
         :default-name="getDefaultName(index)"
+        :mapped-key="axisMappings[index]?.key"
+        :mapped-button="axisMappings[index]?.button"
         :min="store.adc?.raxis_min[index]"
         :max="store.adc?.raxis_max[index]"
         :invert="store.adc?.raxis_invert[index] === 1"
         :smoothing="store.adc?.raxis_smoothing[index]"
-        :btn-low="store.adc?.raxis_to_button_low[index]"
-        :btn-high="store.adc?.raxis_to_button_high[index]"
         @edit="startEditing(index)"
         @save-name="saveAxisName(index)"
         @update:min="(v: number) => updateMin(index, v)"
         @update:max="(v: number) => updateMax(index, v)"
         @update:invert="(v: boolean) => updateInvert(index, v)"
         @update:smoothing="(v: number) => updateSmoothing(index, v)"
-        @update:btn-low="(v: number) => updateBtnLow(index, v)"
-        @update:btn-high="(v: number) => updateBtnHigh(index, v)"
       />
     </div>
 
@@ -130,19 +128,6 @@ const updateSmoothing = (index: number, val: number) => {
   store.updateADC({ raxis_smoothing: vals });
 };
 
-const updateBtnLow = (index: number, val: number) => {
-  if (!store.adc) return;
-  const vals = [...store.adc.raxis_to_button_low];
-  vals[index] = val;
-  store.updateADC({ raxis_to_button_low: vals });
-};
-
-const updateBtnHigh = (index: number, val: number) => {
-  if (!store.adc) return;
-  const vals = [...store.adc.raxis_to_button_high];
-  vals[index] = val;
-  store.updateADC({ raxis_to_button_high: vals });
-};
 
 const loadConfig = async () => {
   try {
@@ -152,8 +137,8 @@ const loadConfig = async () => {
     const names = Array(8).fill('');
     const mappings = Array(8).fill(null).map(() => ({
       name: '',
-      key_low: '',
-      key_high: '',
+      key: '',
+      button: '',
       threshold_low: 4000,
       threshold_high: 60000
     }));
@@ -177,15 +162,23 @@ const loadConfig = async () => {
       }
 
       // Populate mappings values
-      profile.axis_mappings.forEach((m, idx) => {
+      profile.axis_mappings.forEach((m: any, idx) => {
         if (idx < 8) {
-           mappings[idx] = { ...mappings[idx], ...m };
+          // Migration from old schema (key_low / key_high)
+          const migratedMapping = {
+            name: m.name || '',
+            key: m.key || m.key_high || m.key_low || '',
+            button: m.button || m.btn_high || m.btn_low || '',
+            threshold_low: m.threshold_low ?? 4000,
+            threshold_high: m.threshold_high ?? 60000
+          };
+          mappings[idx] = migratedMapping;
         }
       });
     }
 
     axisNames.value = names;
-    axisMappings.value = mappings;
+    axisMappings.value = mappings as AxisMapping[];
   } catch (err) {
     console.error('Failed to load keyboard config:', err);
   }
@@ -254,24 +247,15 @@ const generateKeyMappings = (): KeyMapping[] => {
     const m = axisMappings.value[idx];
     if (!m) return;
     
-    if (m.key_high) {
+    // Only create a mapping if a key or button is assigned
+    if (m.key || m.button) {
       kbm.push({
-        id: `axis.${idx + 3}_high`,
+        id: `axis.${idx + 3}`,
         source_type: 'axis',
         index: idx + 3,
         trigger: 'high',
-        key: m.key_high,
-        threshold_min: m.threshold_low,
-        threshold_max: m.threshold_high
-      });
-    }
-    if (m.key_low) {
-      kbm.push({
-        id: `axis.${idx + 3}_low`,
-        source_type: 'axis',
-        index: idx + 3,
-        trigger: 'low',
-        key: m.key_low,
+        key: m.key || '',
+        button: m.button || '',
         threshold_min: m.threshold_low,
         threshold_max: m.threshold_high
       });
@@ -283,9 +267,9 @@ const generateKeyMappings = (): KeyMapping[] => {
 const getCurrentMappingConfig = (index: number): MappingConfig => {
   const m = axisMappings.value[index];
   return {
-    keyLow: m?.key_low || '',
+    key: m?.key || '',
+    button: m?.button || '',
     thresholdLow: m?.threshold_low ?? 4000,
-    keyHigh: m?.key_high || '',
     thresholdHigh: m?.threshold_high ?? 60000
   };
 };
@@ -315,8 +299,8 @@ const handleModalSave = async (newName: string, cfg: MappingConfig) => {
   axisNames.value[idx] = newName;
   axisMappings.value[idx] = {
     name: newName,
-    key_low: cfg.keyLow,
-    key_high: cfg.keyHigh,
+    key: cfg.key,
+    button: cfg.button,
     threshold_low: cfg.thresholdLow,
     threshold_high: cfg.thresholdHigh
   };

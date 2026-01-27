@@ -282,6 +282,8 @@
         "button_high": "Botão Alto (100%)",
         "key_low": "Tecla Baixa",
         "key_high": "Tecla Alta",
+        "trigger_key": "Acionar Tecla do Teclado",
+        "trigger_button": "Acionar Botão do Joystick",
         "names": {
             "rotation_x": "Rotação X",
             "rotation_y": "Rotação Y",

@@ -280,6 +280,8 @@
         "button_high": "Button High (100%)",
         "key_low": "Key Low",
         "key_high": "Key High",
+        "trigger_key": "Trigger Keyboard Key",
+        "trigger_button": "Trigger Joystick Button",
         "names": {
             "rotation_x": "Rotation X",
             "rotation_y": "Rotation Y",

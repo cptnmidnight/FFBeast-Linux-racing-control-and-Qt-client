@@ -36,14 +36,9 @@
 
           <div class="form-row">
             <ThemedSelect
-              v-model="config.keyLow"
+              v-model="config.key"
               :options="keyOptions"
-              :label="t('axis.key_low')"
-            />
-            <ThemedSelect
-              v-model="config.keyHigh"
-              :options="keyOptions"
-              :label="t('axis.key_high')"
+              :label="t('axis.trigger_key')"
             />
           </div>
 
@@ -51,14 +46,9 @@
             <div class="section-divider" style="margin-top: 24px;">{{ t('axis.joystick_mapping') }}</div>
             <div class="form-row">
               <ThemedSelect
-                v-model="config.btnLow"
+                v-model="config.button"
                 :options="buttonOptions"
-                :label="$t('axis.button_low') || 'Button Low'"
-              />
-              <ThemedSelect
-                v-model="config.btnHigh"
-                :options="buttonOptions"
-                :label="$t('axis.button_high') || 'Button High'"
+                :label="t('axis.trigger_button')"
               />
             </div>
           </template>
@@ -82,12 +72,10 @@ import DualThresholdSlider from '../molecules/DualThresholdSlider.vue';
 import { useHardwareStream } from '../../composables/useHardwareStream';
 
 export interface MappingConfig {
-  keyLow: string;
+  key: string;
+  button: string;
   thresholdLow: number;
-  keyHigh: string;
   thresholdHigh: number;
-  btnLow?: string;
-  btnHigh?: string;
 }
 
 interface Props {
@@ -124,23 +112,17 @@ const liveValue = computed(() => {
 // Local state
 const localName = ref('');
 const config = ref<MappingConfig>({
-  keyLow: '',
+  key: '',
+  button: '',
   thresholdLow: 4000,
-  keyHigh: '',
   thresholdHigh: 60000,
-  btnLow: '',
-  btnHigh: '',
 });
 
 // Watch triggers to sync props to local state
 watch(() => props.show, (newVal: boolean) => {
   if (newVal) {
     localName.value = props.axisName;
-    config.value = { 
-      btnLow: '',
-      btnHigh: '',
-      ...props.initialConfig 
-    };
+    config.value = { ...props.initialConfig };
   }
 }, { immediate: true });
 
@@ -288,7 +270,7 @@ function save() {
 
 .form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 16px;
 }
 

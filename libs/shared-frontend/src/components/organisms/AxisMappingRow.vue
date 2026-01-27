@@ -12,14 +12,20 @@
           help-key="help.axis_custom_name"
         />
       </div>
-      <button 
-        class="edit-btn" 
-        @click="$emit('edit')"
-        :title="$t('help.edit_mapping')"
-      >
-        <span>⚙️</span>
-        <span class="btn-text">{{ $t('buttons.edit_mapping') }}</span>
-      </button>
+      <div class="axis-mapping">
+        <div class="mapped-info" v-if="mappedKey || mappedButton">
+          <span class="mapped-badge mapped-badge--key" v-if="mappedKey">{{ mappedKey }}</span>
+          <span class="mapped-badge mapped-badge--btn" v-if="mappedButton">{{ mappedButton }}</span>
+        </div>
+        <button 
+          class="edit-btn" 
+          @click="$emit('edit')"
+          :title="$t('help.edit_mapping')"
+        >
+          <span>⚙️</span>
+          <span class="btn-text">{{ $t('buttons.edit_mapping') }}</span>
+        </button>
+      </div>
     </div>
 
     <!-- Narrow Axis Monitor -->
@@ -124,6 +130,8 @@ interface Props {
   btnLow?: number;
   btnHigh?: number;
   showCalibration?: boolean;
+  mappedKey?: string;
+  mappedButton?: string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -161,30 +169,10 @@ const { status: hardwareStream } = useHardwareStream();
 
 const liveValue = computed(() => {
   if (hardwareStream.value?.adc) {
-    // Map logical axis (0, 1, 2) to hardware analogs (3, 4, 5)
-    // Hardware often sends 12-bit (0-4095). We need to scale this to 16-bit (0-32767)
-    // For GPIO (index >= 3), we use the index directly + offset? 
-    // Wait, MappingEditModal logic was index < 3 ? index + 3 : index?
-    // User said "igual esta funcionando no MappingEditModal".
-    // In MappingEditModal I implemented: const raw = hardwareStream.value.adc[props.axisIndex + 3] ?? 0;
-    // This implies offset 3 is ALWAYS applied if MappingEditModal is used for all axes.
-    // However, InputsTab logic for getAxisLabel suggests index < 3 are special.
-    // If index is 3 (Slider), is it adc[6]? 
-    // Assuming uniform offset based on previous user interaction success.
-    
-    // I will stick to what I just wrote in MappingEditModal if the user confirmed it's working.
-    // The user said: "só falta ler o eixo corretamente agora igual esta funcionando no ... MappingEditModal"
-    // In MappingEditModal I wrote: `const raw = hardwareStream.value.adc[props.axisIndex + 3] ?? 0;`
-    // Wait, MappingEditModal is likely only called for axes 0, 1, 2?
-    // InputsTab: `activeIndices` allows GPIOs.
-    // If I use `index + 3` it might be wrong for GPIOs if they start at 3 in ADC or strict mapping.
-    // Let's assume the user is testing mainly with axes 0, 1, 2 (X, Y, Z).
-    // I will use `props.index + 3` to strictly match the modal code I wrote which the user praised.
-    
     const raw = hardwareStream.value.adc[props.index + 3] ?? 0;
     return Math.floor((raw * 65535) / 4095);
   }
-  return props.rawValue || 0;
+  return props.rawValue + 3 || 0;
 });
 </script>
 
@@ -310,12 +298,35 @@ const liveValue = computed(() => {
   border-top: 1px solid var(--border-color);
 }
 
-.adc-info {
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-tertiary);
-  font-style: italic;
-  padding: 8px;
-  border-top: 1px solid var(--border-color);
+.axis-mapping {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mapped-info {
+  display: flex;
+  gap: 4px;
+}
+
+.mapped-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+
+.mapped-badge--key {
+  background: rgba(var(--accent-primary-rgb), 0.2);
+  color: var(--accent-primary);
+  border: 1px solid rgba(var(--accent-primary-rgb), 0.3);
+}
+
+.mapped-badge--btn {
+  background: rgba(var(--status-success-rgb, 0, 255, 136), 0.2);
+  color: var(--status-success, #00ff88);
+  border: 1px solid rgba(var(--status-success-rgb, 0, 255, 136), 0.3);
 }
 </style>

@@ -9,6 +9,7 @@ pub struct KeyMapping {
     pub index: usize,
     pub trigger: TriggerType,
     pub key: String,
+    pub button: Option<String>,
     pub threshold: Option<i32>, // Deprecated
     pub threshold_min: Option<i32>,
     pub threshold_max: Option<i32>,

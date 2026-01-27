@@ -245,15 +245,30 @@ impl InputManager {
                     // Scale 12-bit (0-4095) to 16-bit (0-65535)
                     let val_scaled = (val as u32 * 65535) / 4095;
                     
+                    // Hysteresis margin (~1% of range) to prevent jitter/flickering
+                    let margin = 600;
+
                     let triggered = if let (Some(min), Some(max)) = (map.threshold_min, map.threshold_max) {
-                        // Range based trigger: Only active within the specified band
-                        val_scaled > min as u32 && val_scaled < max as u32
+                        // Range based trigger with hysteresis
+                        let low = min as u32;
+                        let high = max as u32;
+                        if was_triggered {
+                            val_scaled >= low.saturating_sub(margin) && val_scaled <= high.saturating_add(margin)
+                        } else {
+                            val_scaled >= low && val_scaled <= high
+                        }
                     } else {
-                        // Threshold based trigger (Standard polarity)
+                        // Threshold based trigger with hysteresis
                         let thr = map.threshold.unwrap_or(32768) as u32;
                         match map.trigger {
-                            TriggerType::High => val_scaled > thr,
-                            TriggerType::Low => val_scaled < thr,
+                            TriggerType::High => {
+                                if was_triggered { val_scaled >= thr.saturating_sub(margin) }
+                                else { val_scaled >= thr }
+                            },
+                            TriggerType::Low => {
+                                if was_triggered { val_scaled <= thr.saturating_add(margin) }
+                                else { val_scaled <= thr }
+                            },
                             _ => false,
                         }
                     };
