@@ -3,11 +3,16 @@
     "identifier": "main-capability",
     "description": "Capability for the configurator main window",
     "windows": [
-        "main"
+        "main",
+        "torque-monitor-popout"
     ],
     "permissions": [
         "core:default",
         "core:event:default",
-        "opener:default"
+        "opener:default",
+        "core:webview:allow-create-webview-window",
+        "core:window:allow-center",
+        "core:window:allow-set-focus",
+        "core:window:allow-set-always-on-top"
     ]
 }

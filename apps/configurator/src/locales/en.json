@@ -12,6 +12,18 @@
         "logs": "Logs",
         "settings": "Settings"
     },
+    "monitor": {
+        "torque_title": "Torque Monitor",
+        "orientation_vertical": "Vertical",
+        "orientation_horizontal": "Horizontal",
+        "expand": "Expand",
+        "collapse": "Minimize",
+        "popout": "Popout",
+        "torque_horizontal": "Torque (Horizontal)",
+        "torque_vertical": "Torque (Vertical)",
+        "always_on_top_on": "Pin Window (Always on Top)",
+        "always_on_top_off": "Unpin Window"
+    },
     "status": {
         "connected": "Connected",
         "disconnected": "Disconnected",

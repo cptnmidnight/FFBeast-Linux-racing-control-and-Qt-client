@@ -11,13 +11,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 
 const props = defineProps({
   modelValue: { type: Number, required: true },
   max: { type: Number, default: 10000 },
   min: { type: Number, default: -10000 },
-  height: { type: Number, default: 100 },
+  height: { type: [Number, String], default: 100 },
   color: { type: String, default: '#4CAF50' }, // Default Green
   label: { type: String, default: 'Torque' },
   sampleCount: { type: Number, default: 300 },
@@ -39,14 +39,38 @@ const updateHistory = () => {
     }
 };
 
+const resizeCanvas = () => {
+    if (!canvas.value || !wrapper.value) return;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = wrapper.value.getBoundingClientRect();
+    
+    let targetHeight = rect.height;
+    if (typeof props.height === 'number') {
+        targetHeight = props.height;
+    }
+    
+    // Ensure we have a valid height
+    if (targetHeight === 0) targetHeight = 100;
+    
+    canvas.value.width = rect.width * dpr;
+    canvas.value.height = targetHeight * dpr;
+    
+    canvas.value.style.width = `${rect.width}px`;
+    canvas.value.style.height = `${targetHeight}px`;
+    
+    if (ctx.value) {
+        ctx.value.scale(dpr, dpr);
+    }
+}
+
 const draw = () => {
     if (!canvas.value || !ctx.value || !wrapper.value) return;
     
-    const width = canvas.value.width / window.devicePixelRatio;
-    const height = canvas.value.height / window.devicePixelRatio;
-    const dpr = window.devicePixelRatio || 1;
-
-    ctx.value.clearRect(0, 0, width * dpr, height * dpr);
+    // We rely on canvas.width/height being set by resizeCanvas
+    const width = canvas.value.width / (window.devicePixelRatio || 1);
+    const height = canvas.value.height / (window.devicePixelRatio || 1);
+    
+    ctx.value.clearRect(0, 0, width, height);
     
     const range = props.max - props.min;
     
@@ -115,21 +139,15 @@ const draw = () => {
     animationFrameId = requestAnimationFrame(draw);
 };
 
-const resizeCanvas = () => {
-    if (!canvas.value || !wrapper.value) return;
-    const dpr = window.devicePixelRatio || 1;
-    const rect = wrapper.value.getBoundingClientRect();
-    
-    canvas.value.width = rect.width * dpr;
-    canvas.value.height = props.height * dpr;
-    
-    canvas.value.style.width = `${rect.width}px`;
-    canvas.value.style.height = `${props.height}px`;
-    
-    if (ctx.value) {
-        ctx.value.scale(dpr, dpr);
-    }
-}
+// Watch triggers
+watch(() => props.height, () => {
+    resizeCanvas();
+});
+
+watch(() => props.orientation, () => {
+   resizeCanvas();
+});
+
 
 onMounted(() => {
     // Fill history initially
@@ -164,6 +182,8 @@ onUnmounted(() => {
     flex-direction: column;
     gap: 0.5rem;
     width: 100%; /* Ensure it fills container */
+    height: 100%; /* Default to fill */
+    min-height: 0; /* Flexbox fix */
 }
 
 .chart-header {
@@ -172,6 +192,7 @@ onUnmounted(() => {
     font-size: 0.85rem;
     color: var(--text-dim);
     font-weight: 600;
+    flex-shrink: 0;
 }
 
 .chart-value {
@@ -181,7 +202,11 @@ onUnmounted(() => {
 
 .canvas-wrapper {
   width: 100%;
+  flex: 1;
   display: block;
+  position: relative;
+  overflow: hidden;
+  min-height: 0;
 }
 
 canvas {

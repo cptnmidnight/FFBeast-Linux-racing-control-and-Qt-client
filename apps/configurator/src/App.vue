@@ -1,5 +1,5 @@
 <template>
-  <div class="app-container">
+  <div v-if="!isChartMode" class="app-container">
     <nav class="sidebar">
       <div class="brand">
         <img src="./assets/logo_app.png" alt="FFBeast Logo" class="brand-logo">
@@ -74,6 +74,33 @@
     <ToastContainer />
     <BaseTooltip />
   </div>
+  <div v-else class="chart-mode">
+      <div class="chart-overlay">
+          <div class="chart-header-overlay">
+             <span class="chart-title-large">{{ $t('monitor.torque_title') }}</span>
+             <span class="chart-value-large">{{ currentTorque.toFixed(0) }}</span>
+          </div>
+          <div class="chart-controls">
+              <button class="btn-floating" @click="toggleAlwaysOnTop" :title="isAlwaysOnTop ? $t('monitor.always_on_top_off') : $t('monitor.always_on_top_on')">
+                  <span class="icon">{{ isAlwaysOnTop ? '📌' : '📍' }}</span>
+              </button>
+              <button class="btn-floating" @click="toggleOrientation" :title="chartOrientation === 'horizontal' ? $t('monitor.orientation_vertical') : $t('monitor.orientation_horizontal')">
+                  <span class="icon">{{ chartOrientation === 'horizontal' ? '⬍' : '⬌' }}</span>
+                  <span class="label">{{ chartOrientation === 'horizontal' ? $t('monitor.orientation_vertical') : $t('monitor.orientation_horizontal') }}</span>
+              </button>
+          </div>
+      </div>
+      <TorqueChart 
+        :model-value="currentTorque" 
+        :max="10000" 
+        :min="-10000" 
+        :label="''" 
+        color="#4CAF50" 
+        :orientation="chartOrientation"
+        height="100%"
+        class="fullscreen-chart transparent-chart"
+      />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -92,6 +119,8 @@ import LogsTab from './components/tabs/LogsTab.vue';
 import SettingsTab from './components/tabs/SettingsTab.vue';
 import ToastContainer from './components/common/ToastContainer.vue';
 import BaseTooltip from './components/common/BaseTooltip.vue';
+import TorqueChart from './components/monitor/TorqueChart.vue';
+import { useHardwareStream } from '@shared/composables/useHardwareStream';
 import { useUIStore } from './stores/ui';
 import { useLogStore } from './stores/logs';
 import { useI18n } from 'vue-i18n';
@@ -100,6 +129,10 @@ const store = useHardwareStore();
 const ui = useUIStore();
 const { t } = useI18n();
 const currentTab = ref('monitor');
+const hardwareStream = useHardwareStream();
+
+const isChartMode = computed(() => new URLSearchParams(window.location.search).get('mode') === 'chart');
+const currentTorque = computed(() => hardwareStream.status.value?.torque ?? 0);
 
 const mainTabs = [
   { id: 'monitor', label: 'tabs.monitor', icon: '📊' },
@@ -123,6 +156,23 @@ const currentTabLabel = computed(() => {
 const statusTextKey = computed(() => {
   return store.isConnected ? 'status.connected' : 'status.disconnected';
 });
+
+const chartOrientation = ref<'horizontal' | 'vertical'>('horizontal');
+const toggleOrientation = () => {
+    chartOrientation.value = chartOrientation.value === 'horizontal' ? 'vertical' : 'horizontal';
+};
+
+const isAlwaysOnTop = ref(false);
+const toggleAlwaysOnTop = async () => {
+    try {
+        const { Window } = await import('@tauri-apps/api/window');
+        const win = Window.getCurrent();
+        isAlwaysOnTop.value = !isAlwaysOnTop.value;
+        await win.setAlwaysOnTop(isAlwaysOnTop.value);
+    } catch (e) {
+        console.error('Failed to toggle always on top:', e);
+    }
+};
 
 const handleReboot = async () => {
     console.log('[App] Reboot button clicked');
@@ -163,16 +213,18 @@ const handleSave = async () => {
 
 onMounted(async () => {
   store.init();
-  ui.setMinLogLevel(ui.settings.minLogLevel); // Sync initial log level
-  ui.toggleDebugMode(ui.settings.debugMode); // Sync initial debug state
-  setupGlobalTooltips();
-  
-  // Listen for Rust backend logs
-  const { listen } = await import('@tauri-apps/api/event');
-  await listen<{ level: any, message: string }>('rust-log', (event) => {
-    const logStore = useLogStore();
-    logStore.addLog(event.payload.level, event.payload.message, 'backend');
-  });
+  if (!isChartMode.value) {
+      ui.setMinLogLevel(ui.settings.minLogLevel); // Sync initial log level
+      ui.toggleDebugMode(ui.settings.debugMode); // Sync initial debug state
+      setupGlobalTooltips();
+      
+      // Listen for Rust backend logs
+      const { listen } = await import('@tauri-apps/api/event');
+      await listen<{ level: any, message: string }>('rust-log', (event) => {
+        const logStore = useLogStore();
+        logStore.addLog(event.payload.level, event.payload.message, 'backend');
+      });
+  }
 });
 
 const setupGlobalTooltips = () => {
@@ -508,5 +560,96 @@ const setupGlobalTooltips = () => {
   50% {
     box-shadow: 0 0 20px rgba(255, 165, 2, 0.7);
   }
+}
+
+.chart-mode {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-main);
+  overflow: hidden;
+}
+
+.fullscreen-chart {
+  flex: 1;
+  width: 100%;
+  height: 100%;
+}
+
+.chart-overlay {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  left: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  z-index: 100;
+  pointer-events: none; /* Let clicks pass through overlay container */
+}
+
+.chart-header-overlay {
+  display: flex;
+  flex-direction: column;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 8px 16px;
+  border-radius: 8px;
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+
+.chart-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.chart-title-large {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.chart-value-large {
+  font-size: 1.8rem;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-weight: bold;
+}
+
+.btn-floating {
+  pointer-events: auto; /* Enable clicks on button */
+  background: rgba(0, 0, 0, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  font-size: 0.9rem;
+  min-width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+}
+
+.btn-floating:hover {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.btn-floating .icon {
+    font-size: 1.2rem;
+}
+
+/* Override chart container background for transparency */
+.transparent-chart :deep(.torque-chart-container) {
+    background: transparent !important;
+    border: none !important;
 }
 </style>

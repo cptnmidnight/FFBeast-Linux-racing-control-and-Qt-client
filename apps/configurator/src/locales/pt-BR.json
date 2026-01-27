@@ -12,6 +12,18 @@
         "logs": "Logs",
         "settings": "Configurações"
     },
+    "monitor": {
+        "torque_title": "Monitor de Torque",
+        "orientation_vertical": "Vertical",
+        "orientation_horizontal": "Horizontal",
+        "expand": "Expandir",
+        "collapse": "Minimizar",
+        "popout": "Nova Janela",
+        "torque_horizontal": "Torque (Horizontal)",
+        "torque_vertical": "Torque (Vertical)",
+        "always_on_top_on": "Fixar Janela (Sempre no Topo)",
+        "always_on_top_off": "Desafixar Janela"
+    },
     "status": {
         "connected": "Conectado",
         "disconnected": "Desconectado",
