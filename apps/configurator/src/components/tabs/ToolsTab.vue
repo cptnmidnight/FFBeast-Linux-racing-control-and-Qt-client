@@ -85,17 +85,14 @@ import { reactive, ref, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useHardwareStore } from '../../stores/hardware';
 import { useUIStore } from '../../stores/ui';
-import { useMappingPersistence } from '@shared/composables/useMappingPersistence';
 import { HardwareService } from '../../services/hardware_service';
 import BaseCard from '../common/BaseCard.vue';
 import ThemedSlider from '@shared/components/atoms/ThemedSlider.vue';
 import StatusBadge from '@shared/components/atoms/StatusBadge.vue';
-import type { KeyMapping } from '@shared/models/KeyMapping';
 
 const store = useHardwareStore();
 const ui = useUIStore();
 const { t } = useI18n();
-const { mappings, load: loadMappings } = useMappingPersistence();
 
 const testValues = reactive({
   constant: 0,
@@ -155,48 +152,6 @@ const factoryReset = () => {
 
 const toggleService = async (active: boolean) => {
   try {
-    if (active) {
-      // Ensure latest mappings are loaded and sent before starting service
-      loadMappings();
-      
-      const keyMappings: KeyMapping[] = [];
-      const analogIndices = [0, 1, 2, 3, 4, 5, 6, 7].filter(i => {
-        if (i < 3) return true;
-        return store.gpio?.pin_mode[i] === 2; // Analog
-      });
-
-      analogIndices.forEach(idx => {
-        const m = mappings.value[idx];
-        if (!m) return;
-
-        if (m.keyHigh) {
-          keyMappings.push({
-            id: `axis.${idx}_high`,
-            source_type: 'axis',
-            index: idx,
-            trigger: 'high',
-            key: m.keyHigh,
-            threshold: m.thresholdHigh ?? 30000
-          });
-        }
-        if (m.keyLow) {
-          keyMappings.push({
-            id: `axis.${idx}_low`,
-            source_type: 'axis',
-            index: idx,
-            trigger: 'low',
-            key: m.keyLow,
-            threshold: m.thresholdLow ?? 2000
-          });
-        }
-      });
-
-      if (keyMappings.length > 0) {
-        await store.updateKeyboardMapping(keyMappings);
-        store.log('info', `Configured ${keyMappings.length} mappings for service start`);
-      }
-    }
-
     await HardwareService.setKeyboardServiceActive(active);
     isServiceActive.value = active;
     

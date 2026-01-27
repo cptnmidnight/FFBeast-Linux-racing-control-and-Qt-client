@@ -27,11 +27,9 @@
               v-model:lowValue="config.thresholdLow"
               v-model:highValue="config.thresholdHigh"
               :min="0"
-              :max="32767"
-              :max-low="13106"
-              :min-high="19660"
+              :max="65535"
               :label="t('settings.deadzone')"
-              :raw-value="liveValue"
+              :raw-value="liveValue || 0"
               help-key="help.motion_range"
             />
           </div>
@@ -116,10 +114,9 @@ const { status: hardwareStream } = useHardwareStream();
 // Real-time value from stream, fallback to prop
 const liveValue = computed(() => {
   if (props.axisIndex !== undefined && hardwareStream.value?.adc) {
-    // Map logical axis (0, 1, 2) to hardware analogs (3, 4, 5)
-    // Hardware often sends 12-bit (0-4095). We need to scale this to 16-bit (0-32767)
+    // Hardware sends 12-bit (0-4095). Scale to 16-bit (0-65535)
     const raw = hardwareStream.value.adc[props.axisIndex + 3] ?? 0;
-    return Math.floor((raw * 32767) / 4095);
+    return Math.floor((raw * 65535) / 4095);
   }
   return props.axisValue + 3 || 0;
 });
@@ -128,9 +125,9 @@ const liveValue = computed(() => {
 const localName = ref('');
 const config = ref<MappingConfig>({
   keyLow: '',
-  thresholdLow: 2000,
+  thresholdLow: 4000,
   keyHigh: '',
-  thresholdHigh: 30000,
+  thresholdHigh: 60000,
   btnLow: '',
   btnHigh: '',
 });

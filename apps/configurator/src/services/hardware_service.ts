@@ -5,6 +5,7 @@ import type { HardwareSettings } from '../models/HardwareSettings';
 import type { GpioSettings } from '../models/GpioSettings';
 import type { AdcSettings } from '../models/AdcSettings';
 import type { KeyMapping } from '@shared/models/KeyMapping';
+import type { KeyboardManagerConfig } from '@shared/models/KeyboardManagerConfig';
 import { HardwareSettingId } from '../models/HardwareSettingId';
 
 export const HardwareService = {
@@ -63,7 +64,7 @@ export const HardwareService = {
     },
 
     async toggleKeyboardService(enabled: boolean): Promise<void> {
-        await invoke('toggle_keyboard_service', { enabled });
+        await invoke('set_keyboard_service_active', { enabled });
     },
 
     async setKeyboardMapping(mappings: KeyMapping[]): Promise<void> {
@@ -76,6 +77,14 @@ export const HardwareService = {
 
     async getKeyboardServiceActive(): Promise<boolean> {
         return await invoke('get_keyboard_service_active');
+    },
+
+    async getKeyboardConfig(): Promise<KeyboardManagerConfig> {
+        return await invoke('get_keyboard_config');
+    },
+
+    async setKeyboardConfig(config: KeyboardManagerConfig): Promise<void> {
+        await invoke('set_keyboard_config', { config });
     },
 
     async setMinLogLevel(level: number): Promise<void> {

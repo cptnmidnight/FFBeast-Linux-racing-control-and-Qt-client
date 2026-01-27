@@ -27,7 +27,7 @@
       <AxisMonitor
         :value="liveValue"
         :min="0"
-        :max="32767"
+        :max="65535"
         :show-value="false"
         class="narrow-monitor"
       />
@@ -39,7 +39,7 @@
         <ThemedSlider
           :model-value="min"
           :min="0"
-          :max="32767"
+          :max="65535"
           :label="$t('settings.min')"
           help-key="help.axis_min"
           @update:model-value="(v: number) => $emit('update:min', v)"
@@ -48,7 +48,7 @@
         <ThemedSlider
           :model-value="max"
           :min="0"
-          :max="32767"
+          :max="65535"
           :label="$t('settings.max')"
           help-key="help.axis_max"
           @update:model-value="(v: number) => $emit('update:max', v)"
@@ -128,7 +128,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   min: 0,
-  max: 32767,
+  max: 65535,
   invert: false,
   smoothing: 0,
   btnLow: 0,
@@ -182,7 +182,7 @@ const liveValue = computed(() => {
     // I will use `props.index + 3` to strictly match the modal code I wrote which the user praised.
     
     const raw = hardwareStream.value.adc[props.index + 3] ?? 0;
-    return Math.floor((raw * 32767) / 4095);
+    return Math.floor((raw * 65535) / 4095);
   }
   return props.rawValue || 0;
 });

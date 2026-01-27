@@ -16,7 +16,7 @@
         :btn-low="store.adc?.raxis_to_button_low[index]"
         :btn-high="store.adc?.raxis_to_button_high[index]"
         @edit="startEditing(index)"
-        @save-name="saveAxisName"
+        @save-name="saveAxisName(index)"
         @update:min="(v: number) => updateMin(index, v)"
         @update:max="(v: number) => updateMax(index, v)"
         @update:invert="(v: boolean) => updateInvert(index, v)"
@@ -48,7 +48,8 @@ import { useHardwareStream } from '@shared/composables/useHardwareStream';
 import AxisMappingRow from '@shared/components/organisms/AxisMappingRow.vue';
 import MappingEditModal, { type MappingConfig } from '@shared/components/organisms/MappingEditModal.vue';
 import type { KeyMapping } from '@shared/models/KeyMapping';
-import { useMappingPersistence } from '@shared/composables/useMappingPersistence';
+import type { KeyboardProfile, AxisMapping } from '@shared/models/KeyboardProfile';
+import { HardwareService } from '../../services/hardware_service';
 
 const store = useHardwareStore();
 const { t } = useI18n();
@@ -57,12 +58,15 @@ const { status: hardwareStatus } = useHardwareStream();
 // State
 const showModal = ref(false);
 const editingIdx = ref<number | null>(null);
+const activeProfile = ref<KeyboardProfile | null>(null);
 
-const { axisNames, mappings, load: loadConfig, save: saveConfig } = useMappingPersistence();
+// Mappings local state (reconstructed for UI)
+const axisNames = ref<string[]>(Array(8).fill(''));
+const axisMappings = ref<AxisMapping[]>([]);
 
 // Computed
 const activeIndices = computed(() => {
-  return [0, 1, 2, 3, 4, 5, 6, 7].filter(i => {
+  return [0, 1, 2, 3, 4, 5].filter(i => {
     if (i < 3) return true;
     return store.gpio?.pin_mode[i] === 2; // Analog mode
   });
@@ -92,8 +96,8 @@ const getAxisValue = (index: number) => {
 
 const getScaledAxisValue = (index: number) => {
   const raw = getAxisValue(index);
-  // Scale 12-bit (0-4095) to 15-bit (0-32767)
-  return Math.floor((raw * 32767) / 4095);
+  // Scale 12-bit (0-4095) to 16-bit (0-65535)
+  return Math.floor((raw * 65535) / 4095);
 };
 
 
@@ -140,13 +144,149 @@ const updateBtnHigh = (index: number, val: number) => {
   store.updateADC({ raxis_to_button_high: vals });
 };
 
+const loadConfig = async () => {
+  try {
+    const config = await HardwareService.getKeyboardConfig();
+    
+    // Always initialize with 8 defaults
+    const names = Array(8).fill('');
+    const mappings = Array(8).fill(null).map(() => ({
+      name: '',
+      key_low: '',
+      key_high: '',
+      threshold_low: 4000,
+      threshold_high: 60000
+    }));
+
+    const profile = config.active_profile_id 
+      ? config.profiles.find(p => p.id === config.active_profile_id)
+      : config.profiles[0];
+
+    if (profile) {
+      activeProfile.value = profile;
+      
+      // Populate names from axis_names map
+      if (profile.axis_names) {
+        Object.entries(profile.axis_names).forEach(([idx, name]) => {
+          const i = parseInt(idx);
+          if (i >= 0 && i < 8) {
+            names[i] = name;
+            mappings[i].name = name;
+          }
+        });
+      }
+
+      // Populate mappings values
+      profile.axis_mappings.forEach((m, idx) => {
+        if (idx < 8) {
+           mappings[idx] = { ...mappings[idx], ...m };
+        }
+      });
+    }
+
+    axisNames.value = names;
+    axisMappings.value = mappings;
+  } catch (err) {
+    console.error('Failed to load keyboard config:', err);
+  }
+};
+
+const saveConfig = async () => {
+  try {
+    const config = await HardwareService.getKeyboardConfig();
+    let currentProfile = activeProfile.value;
+    
+    if (!currentProfile) {
+      // Create a default profile if none exists
+      if (config.profiles.length === 0) {
+          const profile: KeyboardProfile = {
+              id: Date.now().toString(),
+              name: 'Default',
+              key_mappings: [],
+              axis_mappings: [],
+              axis_names: {}
+          };
+          config.profiles.push(profile);
+          config.active_profile_id = profile.id;
+          currentProfile = profile;
+          activeProfile.value = profile;
+      } else {
+          config.active_profile_id = config.profiles[0].id;
+          currentProfile = config.profiles[0];
+          activeProfile.value = currentProfile;
+      }
+    }
+
+    let profileIdx = config.profiles.findIndex(p => p.id === config.active_profile_id);
+    
+    // Fallback to first profile if active_profile_id is missing or invalid
+    if (profileIdx === -1 && config.profiles.length > 0) {
+        profileIdx = 0;
+        config.active_profile_id = config.profiles[0].id;
+    }
+
+    if (profileIdx !== -1) {
+      config.profiles[profileIdx].axis_mappings = axisMappings.value;
+      // Also update KeyMappings based on AxisMappings for the backend processing engine
+      config.profiles[profileIdx].key_mappings = generateKeyMappings();
+      
+      // Update axis names map
+      const nameMap: Record<number, string> = {};
+      axisNames.value.forEach((name, i) => {
+        if (name) nameMap[i] = name;
+      });
+      config.profiles[profileIdx].axis_names = nameMap;
+      
+      console.log('InputsTab: Saving keyboard config', config);
+      await HardwareService.setKeyboardConfig(config);
+      // Also update the live mappings in the engine if service is running
+      console.log('InputsTab: Updating live engine mappings', config.profiles[profileIdx].key_mappings);
+      await store.updateKeyboardMapping(config.profiles[profileIdx].key_mappings);
+    }
+  } catch (err) {
+    console.error('Failed to save keyboard config:', err);
+  }
+};
+
+const generateKeyMappings = (): KeyMapping[] => {
+  const kbm: KeyMapping[] = [];
+  activeIndices.value.forEach(idx => {
+    const m = axisMappings.value[idx];
+    if (!m) return;
+    
+    if (m.key_high) {
+      kbm.push({
+        id: `axis.${idx + 3}_high`,
+        source_type: 'axis',
+        index: idx + 3,
+        trigger: 'high',
+        key: m.key_high,
+        threshold_min: m.threshold_low,
+        threshold_max: m.threshold_high
+      });
+    }
+    if (m.key_low) {
+      kbm.push({
+        id: `axis.${idx + 3}_low`,
+        source_type: 'axis',
+        index: idx + 3,
+        trigger: 'low',
+        key: m.key_low,
+        threshold_min: m.threshold_low,
+        threshold_max: m.threshold_high
+      });
+    }
+  });
+  return kbm;
+};
+
 const getCurrentMappingConfig = (index: number): MappingConfig => {
-  const m = mappings.value[index];
+  const m = axisMappings.value[index];
   return {
-    keyLow: m?.keyLow || '',
-    thresholdLow: m?.thresholdLow ?? 2000,
-    keyHigh: m?.keyHigh || '',
-    thresholdHigh: m?.thresholdHigh ?? 30000
+    keyLow: m?.key_low || '',
+    thresholdLow: m?.threshold_low ?? 4000,
+    keyHigh: m?.key_high || '',
+    thresholdHigh: m?.threshold_high ?? 60000
   };
 };
 
@@ -160,67 +300,29 @@ const closeModal = () => {
   editingIdx.value = null;
 };
 
-const saveAxisName = () => {
-  saveConfig(axisNames.value);
+const saveAxisName = (index: number) => {
+  if (axisMappings.value[index]) {
+    axisMappings.value[index].name = axisNames.value[index];
+  }
+  saveConfig();
 };
 
-const handleModalSave = async (newName: string, config: MappingConfig) => {
+const handleModalSave = async (newName: string, cfg: MappingConfig) => {
   if (editingIdx.value === null) return;
   const idx = editingIdx.value;
 
   // Update local state
   axisNames.value[idx] = newName;
-  mappings.value[idx] = { ...mappings.value[idx], ...config };
+  axisMappings.value[idx] = {
+    name: newName,
+    key_low: cfg.keyLow,
+    key_high: cfg.keyHigh,
+    threshold_low: cfg.thresholdLow,
+    threshold_high: cfg.thresholdHigh
+  };
 
-  // Persist
-  saveConfig(axisNames.value, mappings.value);
-
-  // Generate KeyMappings for backend
-  await pushKeyMappingsToBackend();
-  
+  await saveConfig();
   closeModal();
-};
-
-const pushKeyMappingsToBackend = async () => {
-  const keyMappings: KeyMapping[] = [];
-  
-  activeIndices.value.forEach((actualIndex: number) => {
-    const mapping = mappings.value[actualIndex];
-    if (!mapping) return;
-    
-    // High threshold mapping
-    if (mapping.keyHigh) {
-      keyMappings.push({
-        id: `axis.${actualIndex + 3}_high_${mapping.keyHigh}`,
-        source_type: 'axis',
-        index: actualIndex + 3,
-        trigger: 'high',
-        key: mapping.keyHigh,
-        threshold: mapping.thresholdHigh ?? 30000
-      });
-    }
-    
-    // Low threshold mapping
-    if (mapping.keyLow) {
-      keyMappings.push({
-        id: `axis.${actualIndex + 3}_low_${mapping.keyLow}`,
-        source_type: 'axis',
-        index: actualIndex + 3,
-        trigger: 'low',
-        key: mapping.keyLow,
-        threshold: mapping.thresholdLow ?? 2000
-      });
-    }
-  });
-
-  if (keyMappings.length > 0) {
-    try {
-      await store.updateKeyboardMapping(keyMappings);
-      store.log('info', `Configured ${keyMappings.length} axis keyboard mappings`);
-    } catch (err) {
-      store.log('error', `Failed to set keyboard mappings: ${err}`);
-    }
-  }
 };
 
 onMounted(() => {

@@ -4,5 +4,7 @@ export interface KeyMapping {
     index: number;
     trigger: 'high' | 'low';
     key: string;
-    threshold: number;
+    threshold?: number;
+    threshold_min?: number;
+    threshold_max?: number;
 }

@@ -18,7 +18,7 @@
             :max="inputLowMax"
             :step="step"
             :disabled="disabled"
-            @input="handleLowInput"
+            @input="handleLowNumberInput"
             @blur="commitLowInput"
             @keydown.enter="commitLowInput"
           />
@@ -32,7 +32,7 @@
             :max="max"
             :step="step"
             :disabled="disabled"
-            @input="handleHighInput"
+            @input="handleHighNumberInput"
             @blur="commitHighInput"
             @keydown.enter="commitHighInput"
           />
@@ -64,7 +64,7 @@
           :step="step"
           :disabled="disabled"
           class="dual-threshold-slider__input dual-threshold-slider__input--low"
-          @input="handleLowInput"
+          @input="handleLowSliderInput"
         />
         
         <!-- High threshold slider -->
@@ -76,7 +76,7 @@
           :step="step"
           :disabled="disabled"
           class="dual-threshold-slider__input dual-threshold-slider__input--high"
-          @input="handleHighInput"
+          @input="handleHighSliderInput"
         />
       </div>
       
@@ -108,7 +108,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   min: 0,
-  max: 32767,
+  max: 65535,
   step: 1,
   label: '',
   disabled: false,
@@ -178,7 +178,14 @@ const inputHighMin = computed(() => {
 let lowCommitTimer: ReturnType<typeof setTimeout> | null = null;
 let highCommitTimer: ReturnType<typeof setTimeout> | null = null;
 
-function handleLowInput(event: Event) {
+function handleLowSliderInput(event: Event) {
+  const target = event.target as HTMLInputElement;
+  const val = Number(target.value);
+  localLow.value = val;
+  emit('update:lowValue', val);
+}
+
+function handleLowNumberInput(event: Event) {
   const target = event.target as HTMLInputElement;
   localLow.value = target.value;
 
@@ -214,7 +221,14 @@ function commitLowInput() {
   emit('update:lowValue', val);
 }
 
-function handleHighInput(event: Event) {
+function handleHighSliderInput(event: Event) {
+  const target = event.target as HTMLInputElement;
+  const val = Number(target.value);
+  localHigh.value = val;
+  emit('update:highValue', val);
+}
+
+function handleHighNumberInput(event: Event) {
   const target = event.target as HTMLInputElement;
   localHigh.value = target.value;
 
