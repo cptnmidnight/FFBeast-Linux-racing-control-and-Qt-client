@@ -13,7 +13,7 @@ const icons = {
     'license': 'verified-user-outline'
 };
 
-const dir = path.join(__dirname, 'apps/configurator/src/assets/icons');
+const dir = path.join(__dirname, 'apps/ffbeast/src/assets/icons');
 if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
 }

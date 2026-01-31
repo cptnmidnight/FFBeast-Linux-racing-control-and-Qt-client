@@ -44,8 +44,7 @@ The SODevs Game Launcher aims for a premium, high-performance aesthetic.
 
 ## 📁 Directory Structure
 
-- `apps/configurator`: The main hardware configuration tool.
-- `launcher`: The game library and launcher application.
+- `apps/ffbeast`: The main hardware configuration tool.
 - `libs/controller`: Core hardware abstraction and communication logic.
 - `docs`: Technical specifications and project documentation.
 

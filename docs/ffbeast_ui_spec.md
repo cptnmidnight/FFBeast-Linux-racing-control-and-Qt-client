@@ -1,4 +1,4 @@
-# Especificação Geral: FFBeast UI (Configurator)
+# Especificação Geral: FFBeast UI
 
 O **FFBeast UI** é a aplicação de configuração e monitoramento para o hardware de Force Feedback "FFBeast". Desenvolvido sobre a plataforma **Tauri v2**, utiliza **Vue 3**, **TypeScript** e **Vite** para uma interface moderna, reativa e tipada.
 
@@ -52,7 +52,7 @@ O **FFBeast UI** é a aplicação de configuração e monitoramento para o hardw
 ## Estrutura de Pastas (src)
 
 ```
-apps/configurator/src
+apps/ffbeast/src
 ├── assets/          # Assets estáticos
 ├── components/      # Componentes Vue SFC
 │   ├── common/      # UI Base (BaseCard, BaseSlider, etc)

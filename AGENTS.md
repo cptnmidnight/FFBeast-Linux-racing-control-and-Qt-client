@@ -1,16 +1,14 @@
 # AGENTS.md
 
 ## Build & Dev Commands
-- **Configurator dev**: `cd apps/configurator && npm run tauri dev`
-- **Launcher dev**: `cd apps/launcher && npm run tauri dev`
+- **FFBeast dev**: `cd apps/ffbeast && npm run tauri dev`
 - **Build release**: `npm run tauri build` (from app directory)
 - **Type check**: `vue-tsc -b` | **Rust check**: `cargo check`
 - **Run single Rust test**: `cargo test <test_name> -- --nocapture`
 
 ## Architecture
 - **Tauri monorepo**: Rust backend + Vue 3 frontend
-- **apps/configurator**: FFBeast wheel configurator (PID tuning, effects mapping)
-- **apps/launcher**: Game launcher application
+- **apps/ffbeast**: FFBeast wheel configurator (PID tuning, effects mapping)
 - **libs/controller**: Rust HID/USB driver for FFBeast hardware
 - **libs/enigo**: Input automation library (git submodule)
 
