@@ -22,13 +22,12 @@
           help-key="help.braking_limit"
           @change="saveHardware(HardwareSettingId.BrakingLimit)"
         />
-        <ThemedSlider 
-          v-model="hardware.amplifier_gain" 
+        <ThemedSelect 
+          :model-value="hardware.amplifier_gain" 
           :label="$t('settings.amplifier_gain')" 
-          value-suffix="%"
-          :max="500" 
+          :options="amplifierGainOptions"
           help-key="help.amplifier_gain"
-          @change="saveHardware(HardwareSettingId.AmplifierGain)"
+          @change="(v) => updateAmplifierGain(v)"
         />
       </BaseCard>
 
@@ -39,6 +38,7 @@
           :label="$t('settings.encoder_cpr')" 
           :min="1" 
           :max="65535" 
+          help-key="help.encoder_cpr"
           @change="saveHardware(HardwareSettingId.EncoderCPR, true)"
         />
         <ThemedSlider 
@@ -46,6 +46,7 @@
           :label="$t('settings.speed_buffer')" 
           :min="1" 
           :max="255" 
+          help-key="help.speed_buffer"
           @change="saveHardware(HardwareSettingId.SpeedBufferSize)"
         />
         <ThemedSlider 
@@ -114,14 +115,16 @@
         <ThemedSlider 
           v-model="hardware.proportional_gain" 
           :label="$t('settings.p_gain')" 
-          :max="2000" 
+          value-suffix="%"
+          :max="100" 
           help-key="help.proportional_gain"
           @change="saveHardware(HardwareSettingId.PGain)"
         />
         <ThemedSlider 
           v-model="hardware.integral_gain" 
           :label="$t('settings.i_gain')" 
-          :max="1000" 
+          value-suffix="%"
+          :max="500" 
           help-key="help.integral_gain"
           @change="saveHardware(HardwareSettingId.IGain, true)"
         />
@@ -137,15 +140,24 @@ import { useHardwareStore } from '../../stores/hardware';
 import BaseCard from '../common/BaseCard.vue';
 import ThemedSlider from '@shared/components/atoms/ThemedSlider.vue';
 import ThemedSwitch from '@shared/components/atoms/ThemedSwitch.vue';
+import ThemedSelect from '@shared/components/atoms/ThemedSelect.vue';
 import { HardwareSettingId } from '../../models/HardwareSettingId';
 
 const store = useHardwareStore();
+
+// Amplifier Gain enum options (from hardware API)
+const amplifierGainOptions = [
+  { value: 0, label: '80 V/V' },
+  { value: 1, label: '40 V/V' },
+  { value: 2, label: '20 V/V' },
+  { value: 3, label: '10 V/V' },
+];
 
 const hardware = reactive({
   encoder_cpr: store.hardware?.encoder_cpr ?? 600,
   power_limit: store.hardware?.power_limit ?? 100,
   braking_limit: store.hardware?.braking_limit ?? 100,
-  amplifier_gain: store.hardware?.amplifier_gain ?? 100,
+  amplifier_gain: store.hardware?.amplifier_gain ?? 0, // Default: 80 V/V
   pole_pairs: store.hardware?.pole_pairs ?? 7,
   calibration_speed: store.hardware?.calibration_speed ?? 10,
   calibration_magnitude: store.hardware?.calibration_magnitude ?? 50,
@@ -208,6 +220,11 @@ const saveHardware = (fieldId?: number, isU16: boolean = false) => {
 
   // Update store state without triggering a full hardware send
   store.updateHW(currentHW);
+};
+
+const updateAmplifierGain = (value: string | number) => {
+  hardware.amplifier_gain = typeof value === 'string' ? parseInt(value) : value;
+  saveHardware(HardwareSettingId.AmplifierGain);
 };
 
 const toggleFFB = async (val: boolean) => {

@@ -10,8 +10,6 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@fontsource/jetbrains-mono": "^5.1.1",
-    "@fontsource/outfit": "^5.1.1",
     "@tauri-apps/api": "^2.1.0",
     "@tauri-apps/plugin-opener": "^2.1.0",
     "pinia": "^2.2.8",

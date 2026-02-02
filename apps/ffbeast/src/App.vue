@@ -41,12 +41,11 @@
           <button class="btn-outline reboot" @click="handleReboot">{{ $t('buttons.reboot') }}</button>
           <button class="btn-outline" @click="handleResetCenter">{{ $t('buttons.reset_center') }}</button>
           <button 
-            :class="['btn-primary', { 'has-changes': store.hasUnsavedChanges, 'reboot-required': store.rebootRequired }]" 
+            :class="['btn-primary', { 'has-changes': store.hasUnsavedChanges }]" 
             @click="handleSave"
-            :title="store.rebootRequired ? $t('warnings.reboot_required') : ''"
           >
             <span v-if="store.hasUnsavedChanges" class="unsaved-dot"></span>
-            {{ store.rebootRequired ? $t('buttons.save_reboot') : $t('buttons.save') }}
+            {{ $t('buttons.save_reboot') }}
           </button>
         </div>
       </header>
@@ -104,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useHardwareStore } from './stores/hardware';
 import MonitorTab from './components/tabs/MonitorTab.vue';
 import EffectsTab from './components/tabs/EffectsTab.vue';
@@ -133,6 +132,14 @@ const hardwareStream = useHardwareStream();
 
 const isChartMode = computed(() => new URLSearchParams(window.location.search).get('mode') === 'chart');
 const currentTorque = computed(() => hardwareStream.status.value?.torque ?? 0);
+
+// Reset scroll when changing tabs
+watch(currentTab, () => {
+  const viewport = document.querySelector('.tab-viewport');
+  if (viewport) {
+    viewport.scrollTop = 0;
+  }
+});
 
 const mainTabs = [
   { id: 'monitor', label: 'tabs.monitor', icon: '📊' },
@@ -195,19 +202,14 @@ const handleResetCenter = async () => {
 };
 
 const handleSave = async () => {
-    console.log('[App] Save button clicked');
+    console.log('[App] Save and Reboot button clicked');
     try {
-        const needsReboot = store.rebootRequired;
         await store.saveToEeprom();
-        
-        if (needsReboot) {
-             console.log('[App] Reboot required, rebooting...');
-             await store.reboot();
-        }
-        
-        console.log('[App] Save completed');
+        console.log('[App] Settings saved, rebooting...');
+        await store.reboot();
+        console.log('[App] Save and reboot completed');
     } catch (err) {
-        console.error('[App] Save error:', err);
+        console.error('[App] Save and reboot error:', err);
     }
 };
 
@@ -216,6 +218,9 @@ onMounted(async () => {
   if (!isChartMode.value) {
       ui.setMinLogLevel(ui.settings.minLogLevel); // Sync initial log level
       ui.toggleDebugMode(ui.settings.debugMode); // Sync initial debug state
+      ui.setFontFamily(ui.settings.fontFamily);
+      ui.setAccentColor(ui.settings.accentColor);
+      ui.setFontSize(ui.settings.fontSize);
       setupGlobalTooltips();
       
       // Listen for Rust backend logs
@@ -454,7 +459,7 @@ const setupGlobalTooltips = () => {
 /* Button variants - will be moved to common components later */
 .btn-primary {
   background: var(--accent);
-  color: #000;
+  color: var(--text-on-accent, #ffffff);
   font-weight: bold;
   padding: 8px 16px;
   border-radius: var(--radius-sm);

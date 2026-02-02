@@ -26,6 +26,9 @@ export const useHardwareStore = defineStore('hardware', {
         reconnectTimer: null as ReturnType<typeof setInterval> | null,
         hasUnsavedChanges: false,
         rebootRequired: false,
+        // Original values for comparison
+        originalHardware: null as HardwareSettings | null,
+        originalGpio: null as GpioSettings | null,
     }),
 
     actions: {
@@ -57,6 +60,11 @@ export const useHardwareStore = defineStore('hardware', {
                 this.hardware = data.hw;
                 this.gpio = data.gpio;
                 this.adc = data.adc;
+
+                // Save original values for comparison
+                this.originalHardware = { ...data.hw };
+                this.originalGpio = { ...data.gpio };
+
                 this.isConnected = true;
                 this.lastError = null;
 
@@ -102,11 +110,13 @@ export const useHardwareStore = defineStore('hardware', {
             requestAnimationFrame(poll);
         },
 
-        async updateFX(newFx: Partial<EffectSettings>) {
+        async updateFX(newFx: Partial<EffectSettings>, markUnsaved: boolean = false) {
             if (!this.effects) return;
             this.effects = { ...this.effects, ...newFx };
             // await HardwareService.updateEffectSettings(this.effects);
-            this.hasUnsavedChanges = true;
+            if (markUnsaved) {
+                this.hasUnsavedChanges = true;
+            }
         },
 
         async updateFXField(fieldId: HardwareSettingId, index: number, value: number, isU16: boolean = false) {
@@ -128,7 +138,7 @@ export const useHardwareStore = defineStore('hardware', {
             }
         },
 
-        async updateHW(newHw: Partial<HardwareSettings>) {
+        async updateHW(newHw: Partial<HardwareSettings>, markUnsaved: boolean = false) {
             if (!this.hardware) return;
 
             // Check for reboot required fields
@@ -138,7 +148,16 @@ export const useHardwareStore = defineStore('hardware', {
 
             this.hardware = { ...this.hardware, ...newHw };
             // await HardwareService.updateHardwareSettings(this.hardware);
-            this.hasUnsavedChanges = true;
+
+            // Check if force_enabled differs from original value
+            if (this.originalHardware && this.hardware.force_enabled !== this.originalHardware.force_enabled) {
+                this.hasUnsavedChanges = true;
+            } else if (markUnsaved) {
+                this.hasUnsavedChanges = true;
+            } else {
+                // If force_enabled is back to original, clear unsaved changes
+                this.hasUnsavedChanges = false;
+            }
         },
 
         async updateHWField(fieldId: HardwareSettingId, index: number, value: number, isU16: boolean = false) {
@@ -215,6 +234,15 @@ export const useHardwareStore = defineStore('hardware', {
                 this.log('debug', 'Calling HardwareService.saveToEeprom()...');
                 await HardwareService.saveToEeprom();
                 this.log('info', 'Settings saved to EEPROM successfully');
+
+                // Update original values to current values after successful save
+                if (this.hardware) {
+                    this.originalHardware = { ...this.hardware };
+                }
+                if (this.gpio) {
+                    this.originalGpio = { ...this.gpio };
+                }
+
                 this.hasUnsavedChanges = false;
                 ui.showToast(t('toasts.settings_saved'), 'success');
             } catch (err) {
@@ -240,15 +268,47 @@ export const useHardwareStore = defineStore('hardware', {
             if (!this.gpio) return;
             this.gpio = { ...this.gpio, ...newGpio };
             // await HardwareService.updateGpioSettings(this.gpio);
-            this.hasUnsavedChanges = true;
-            this.rebootRequired = true;
+
+            // Check if pin_mode differs from original
+            let hasChanges = false;
+            if (this.originalGpio && this.gpio.pin_mode && this.originalGpio.pin_mode) {
+                hasChanges = !this.gpio.pin_mode.every((mode, idx) => mode === this.originalGpio!.pin_mode[idx]);
+            }
+
+            if (hasChanges) {
+                this.hasUnsavedChanges = true;
+                this.rebootRequired = true;
+            } else {
+                this.hasUnsavedChanges = false;
+                this.rebootRequired = false;
+            }
         },
 
-        async updateADC(newAdc: Partial<AdcSettings>) {
+        async updateADC(newAdc: Partial<AdcSettings>, markUnsaved: boolean = false) {
             if (!this.adc) return;
             this.adc = { ...this.adc, ...newAdc };
             // await HardwareService.updateAdcSettings(this.adc);
-            this.hasUnsavedChanges = true;
+            if (markUnsaved) {
+                this.hasUnsavedChanges = true;
+            }
+        },
+
+        async updateADCField(fieldId: HardwareSettingId, index: number, value: number, isU16: boolean = false) {
+            if (!this.adc) return;
+
+            let data: number[];
+            if (isU16) {
+                // Little Endian
+                data = [value & 0xFF, (value >> 8) & 0xFF];
+            } else {
+                data = [value & 0xFF];
+            }
+
+            try {
+                await HardwareService.updateHardwareSetting(fieldId, index, data);
+            } catch (e) {
+                console.error(`Failed to update ADC field ${fieldId}: ${e}`);
+            }
         },
 
         async updateKeyboardMapping(mappings: KeyMapping[]) {

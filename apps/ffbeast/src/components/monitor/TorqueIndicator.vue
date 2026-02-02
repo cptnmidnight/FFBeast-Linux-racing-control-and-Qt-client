@@ -36,7 +36,7 @@ const torquePercent = computed(() => {
 // Convert to Nm considering power_limit
 // Motor max: 15 Nm (typical for high-torque FFB motor)
 // Actual max = (power_limit / 100) * 15 Nm
-const MOTOR_MAX_TORQUE_NM = 15;
+const MOTOR_MAX_TORQUE_NM = store.hardware?.pole_pairs ?? 15;
 const powerLimit = computed(() => store.hardware?.power_limit ?? 100);
 const effectStrength = computed(() => store.effects?.total_effect_strength ?? 100);
 

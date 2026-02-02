@@ -12,8 +12,8 @@
               <input type="checkbox" v-model="autoScroll" class="scroll-checkbox">
               <span>{{ $t('labels.auto_scroll') || 'Auto-scroll' }}</span>
             </label>
-            <button class="btn-action" @click="clearLogs">{{ $t('buttons.clear') || 'Clear' }}</button>
-            <button class="btn-action" @click="exportLogs">{{ $t('buttons.export') || 'Export' }}</button>
+            <button class="btn-action" @click="clearLogs">{{ $t('buttons.clear_logs') }}</button>
+            <button class="btn-action" @click="exportLogs">{{ $t('buttons.export_logs') }}</button>
           </div>
         </div>
       </template>
@@ -43,9 +43,11 @@ const autoScroll = ref(true);
 const scrollToBottom = async () => {
   if (!autoScroll.value) return;
   await nextTick();
-  if (scrollContainer.value) {
-    scrollContainer.value.scrollTop = scrollContainer.value.scrollHeight;
-  }
+  setTimeout(() => {
+    if (scrollContainer.value) {
+      scrollContainer.value.scrollTop = scrollContainer.value.scrollHeight;
+    }
+  }, 10);
 };
 
 watch(() => logs.value.length, () => {
@@ -79,17 +81,23 @@ onMounted(() => {
 <style scoped>
 .logs-tab {
   padding: var(--content-padding);
-  height: calc(100vh - 120px);
-}
-
-.logs-card {
-  height: 100%;
-}
-
-:deep(.card-content) {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.logs-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+:deep(.card-content) {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .logs-header {
@@ -156,13 +164,17 @@ onMounted(() => {
 
 .logs-viewport {
   flex: 1;
+  min-height: 0;
+  height: 600px; /* Fallback height */
   background: rgba(0, 0, 0, 0.25);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 1.25rem;
+  padding-bottom: 2rem;
   font-family: var(--font-mono);
   font-size: 13px;
   overflow-y: auto;
+  overflow-x: hidden;
   margin-top: 1rem;
 }
 
@@ -170,7 +182,8 @@ onMounted(() => {
   margin-bottom: 6px;
   line-height: 1.5;
   white-space: pre-wrap;
-  word-break: break-all;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .log-time { color: var(--text-secondary); opacity: 0.7; margin-right: 10px; }

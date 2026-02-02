@@ -10,12 +10,28 @@
           @change="changeLang"
         />
         
-        <ThemedSelect 
-          v-model="uiStore.settings.fontFamily" 
-          :options="fontOptions" 
-          :label="$t('settings.ui_font')"
-          @change="(v: string | number) => uiStore.setFontFamily(String(v))"
-        />
+        <div class="font-controls">
+          <ThemedSelect 
+            v-model="uiStore.settings.fontFamily" 
+            :options="fontOptions" 
+            :label="$t('settings.ui_font')"
+            class="font-select"
+            @change="(v: string | number) => uiStore.setFontFamily(String(v))"
+          />
+          <button 
+            class="btn-outline btn-small" 
+            :disabled="isLoadingFonts"
+            @click="loadSystemFonts"
+            :title="$t('settings.load_system_fonts')"
+          >
+            <span v-if="isLoadingFonts" class="spinner"></span>
+            <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 12C4 16.4183 7.58172 20 12 20C14.5376 20 16.8066 18.8184 18.2917 16.9667M19.9583 14C19.986 13.3469 20 12.6806 20 12C20 7.58172 16.4183 4 12 4C9.46237 4 7.19342 5.18165 5.70835 7.03328" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M4.5 7H7.5V4" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M19.5 17H16.5V20" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
         
         <ThemedSlider 
           v-model="uiStore.settings.fontSize" 
@@ -32,9 +48,23 @@
               v-for="color in accentColors" 
               :key="color" 
               class="color-dot"
-              :style="{ background: color, borderColor: uiStore.settings.debugMode ? '#fff' : 'transparent' }"
+              :style="{ background: color, borderColor: uiStore.settings.accentColor === color ? '#fff' : 'transparent' }"
               @click="uiStore.setAccentColor(color)"
             ></div>
+            
+            <!-- Custom Color Picker -->
+            <div 
+              class="color-dot custom-color"
+              :style="{ background: 'conic-gradient(from 0deg, red, yellow, lime, aqua, blue, magenta, red)', borderColor: !accentColors.includes(uiStore.settings.accentColor) ? '#fff' : 'transparent' }"
+              :title="$t('settings.custom_color') || 'Custom Color'"
+            >
+              <input 
+                type="color" 
+                class="color-input"
+                :value="uiStore.settings.accentColor"
+                @input="(e) => handleCustomColor((e.target as HTMLInputElement).value)"
+              />
+            </div>
           </div>
         </div>
       </BaseCard>
@@ -138,6 +168,58 @@ const uiStore = useUIStore();
 const language = ref(locale.value);
 const versions = ref({ app: '...', controller: '...' });
 
+const fontOptions = ref([
+  { label: 'System UI', value: 'system-ui' },
+  { label: 'Sans Serif', value: 'sans-serif' },
+  { label: 'Serif', value: 'serif' },
+  { label: 'Monospace', value: 'monospace' },
+]);
+
+// Extended interface for FontData
+
+
+const isLoadingFonts = ref(false);
+
+// Extend window interface usually needs a .d.ts, but we can cast to any for now
+const loadSystemFonts = async () => {
+  if (isLoadingFonts.value) return;
+  
+  isLoadingFonts.value = true;
+  try {
+    // Check if API is available
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ('queryLocalFonts' in window) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const fonts = await (window as any).queryLocalFonts();
+      
+      const uniqueFamilies = new Set<string>();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      fonts.forEach((font: any) => uniqueFamilies.add(font.family));
+      
+      const sortedFonts = Array.from(uniqueFamilies).sort().map(family => ({
+        label: family,
+        value: family // Use font name directly, CSS handles quotes handling usually, but we might want to ensure quotes if spaces
+      }));
+      
+      if (sortedFonts.length > 0) {
+        fontOptions.value = [
+          { label: 'System UI (Default)', value: 'system-ui' },
+          ...sortedFonts
+        ];
+        uiStore.showToast(t('settings.toasts.fonts_loaded'), 'success');
+      }
+    } else {
+        console.warn('Local Font Access API not supported, falling back to basic list');
+        uiStore.showToast('Local Font API not supported', 'warn');
+    }
+  } catch (err) {
+    console.error('Failed to load system fonts:', err);
+    uiStore.showToast('Failed to load fonts', 'error');
+  } finally {
+    isLoadingFonts.value = false;
+  }
+};
+
 onMounted(async () => {
   try {
     versions.value = await HardwareService.getVersions();
@@ -151,13 +233,15 @@ const langOptions = [
   { label: 'English', value: 'en' },
   { label: 'Español', value: 'es' },
   { label: 'Português (Brasil)', value: 'pt-BR' },
+  { label: 'Русский', value: 'ru' },
 ];
 
-const fontOptions = [
-  { label: 'Outfit', value: 'Outfit' },
-  { label: 'JetBrains Mono', value: 'JetBrains Mono' },
-  { label: 'System Default', value: 'system-ui' },
-];
+
+
+const handleCustomColor = (color: string) => {
+  uiStore.setAccentColor(color);
+  localStorage.setItem('ffbeast_custom_accent', color);
+};
 
 const toastPositionOptions = computed(() => [
   { label: t('toasts.positions.top_right'), value: 'top-right' },
@@ -166,6 +250,7 @@ const toastPositionOptions = computed(() => [
   { label: t('toasts.positions.bottom_left'), value: 'bottom-left' },
 ]);
 
+// Log Levels
 const logLevelOptions = [
   { label: 'Error', value: 1 },
   { label: 'Warn', value: 2 },
@@ -189,10 +274,9 @@ const changeLang = (val: string | number) => {
 };
 
 const testToast = () => {
-  uiStore.showToast('This is a test notification! 🎉', 'success');
+  uiStore.showToast(t('toasts.test_notification'), 'success');
 };
 </script>
-
 
 <style scoped>
 .settings-tab {
@@ -234,6 +318,39 @@ const testToast = () => {
   color: var(--text-secondary);
 }
 
+.font-controls {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.font-select {
+  flex: 1;
+}
+
+.btn-small {
+  padding: 8px 12px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  margin-top: 1px;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--text-dim);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .compact-select {
   width: 180px;
 }
@@ -272,6 +389,27 @@ const testToast = () => {
   scale: 1.1;
 }
 
+.custom-color {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.color-input {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 200%;
+  height: 200%;
+  padding: 0;
+  border: none;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .info-list {
   display: flex;
   flex-direction: column;
@@ -294,14 +432,12 @@ const testToast = () => {
   font-weight: 500;
 }
 
-
-
 .btn-test {
   margin-top: 16px;
   width: 100%;
   padding: 10px;
   background: var(--accent-primary);
-  color: #000;
+  color: var(--text-on-accent, #000);
   border: none;
   border-radius: 6px;
   font-size: 14px;

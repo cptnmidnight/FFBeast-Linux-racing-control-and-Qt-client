@@ -17,10 +17,12 @@ export const useUIStore = defineStore('ui', {
             y: 0
         },
         settings: {
-            toastPosition: 'bottom-right' as 'top-right' | 'bottom-right' | 'top-left' | 'bottom-left',
-            toastMargin: 20,
-            fontFamily: 'Outfit',
-            fontSize: 16,
+            toastPosition: (localStorage.getItem('ffbeast_toast_position') || 'bottom-right') as 'top-right' | 'bottom-right' | 'top-left' | 'bottom-left',
+            toastMargin: Number(localStorage.getItem('ffbeast_toast_margin') || '20'),
+            fontFamily: localStorage.getItem('ffbeast_font') || 'Outfit',
+            fontSize: Number(localStorage.getItem('ffbeast_font_size') || '16'),
+            accentColor: localStorage.getItem('ffbeast_accent') || '#00d4ff',
+            customAccentColor: localStorage.getItem('ffbeast_custom_accent') || '#00d4ff',
             minLogLevel: Number(localStorage.getItem('ffbeast_min_log_level') || '3'),
             debugMode: localStorage.getItem('ffbeast_debug_mode') === 'true'
         }
@@ -60,9 +62,26 @@ export const useUIStore = defineStore('ui', {
         },
 
         setAccentColor(color: string) {
+            this.settings.accentColor = color;
             document.documentElement.style.setProperty('--accent', color);
             document.documentElement.style.setProperty('--accent-glow', color + '66');
+
+            const textColor = this.getContrastColor(color);
+            document.documentElement.style.setProperty('--text-on-accent', textColor);
+
             localStorage.setItem('ffbeast_accent', color);
+        },
+
+        getContrastColor(hexColor: string) {
+            const hex = hexColor.replace('#', '');
+            if (hex.length !== 6) return 'black'; // Fallback
+
+            const r = parseInt(hex.substr(0, 2), 16);
+            const g = parseInt(hex.substr(2, 2), 16);
+            const b = parseInt(hex.substr(4, 2), 16);
+
+            const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+            return (yiq >= 128) ? '#1a1a1a' : '#ffffff';
         },
 
         showToast(message: string, type: Toast['type'] = 'info', duration = 3000) {

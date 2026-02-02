@@ -42,5 +42,5 @@ The workspace is organized as follows:
 
 - **Cross-Platform**: Built on Rust and web technologies for Windows (primary) and Linux support.
 - **Modular Architecture**: separate services for Hardware, Effects, and UI rendering.
-- **Internationalization**: Full support for EN and PT-BR.
+- **Internationalization**: Full support for EN, ES and PT-BR.
 - **Real-time Monitoring**: High-frequency telemetry for wheel position, torque, and IO states.

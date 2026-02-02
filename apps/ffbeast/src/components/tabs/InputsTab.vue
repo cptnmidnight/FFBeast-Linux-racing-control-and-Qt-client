@@ -15,12 +15,16 @@
         :max="store.adc?.raxis_max[index]"
         :invert="store.adc?.raxis_invert[index] === 1"
         :smoothing="store.adc?.raxis_smoothing[index]"
+        :btn-low="store.adc?.raxis_to_button_low[index]"
+        :btn-high="store.adc?.raxis_to_button_high[index]"
         @edit="startEditing(index)"
         @save-name="saveAxisName(index)"
         @update:min="(v: number) => updateMin(index, v)"
         @update:max="(v: number) => updateMax(index, v)"
         @update:invert="(v: boolean) => updateInvert(index, v)"
         @update:smoothing="(v: number) => updateSmoothing(index, v)"
+        @update:btnLow="(v: number) => updateBtnLow(index, v)"
+        @update:btnHigh="(v: number) => updateBtnHigh(index, v)"
       />
     </div>
 
@@ -48,6 +52,7 @@ import MappingEditModal, { type MappingConfig } from '@shared/components/organis
 import type { KeyMapping } from '@shared/models/KeyMapping';
 import type { KeyboardProfile, AxisMapping } from '@shared/models/KeyboardProfile';
 import { HardwareService } from '../../services/hardware_service';
+import { HardwareSettingId } from '../../models/HardwareSettingId';
 
 const store = useHardwareStore();
 const { t } = useI18n();
@@ -105,6 +110,7 @@ const updateMin = (index: number, val: number) => {
   const mins = [...store.adc.raxis_min];
   mins[index] = val;
   store.updateADC({ raxis_min: mins });
+  store.updateADCField(HardwareSettingId.AdcMin, index, val, true);
 };
 
 const updateMax = (index: number, val: number) => {
@@ -112,6 +118,7 @@ const updateMax = (index: number, val: number) => {
   const maxes = [...store.adc.raxis_max];
   maxes[index] = val;
   store.updateADC({ raxis_max: maxes });
+  store.updateADCField(HardwareSettingId.AdcMax, index, val, true);
 };
 
 const updateInvert = (index: number, invert: boolean) => {
@@ -119,6 +126,7 @@ const updateInvert = (index: number, invert: boolean) => {
   const invs = [...store.adc.raxis_invert];
   invs[index] = invert ? 1 : 0;
   store.updateADC({ raxis_invert: invs });
+  store.updateADCField(HardwareSettingId.AdcInvert, index, invert ? 1 : 0, false);
 };
 
 const updateSmoothing = (index: number, val: number) => {
@@ -126,6 +134,23 @@ const updateSmoothing = (index: number, val: number) => {
   const vals = [...store.adc.raxis_smoothing];
   vals[index] = val;
   store.updateADC({ raxis_smoothing: vals });
+  store.updateADCField(HardwareSettingId.AdcSmoothing, index, val, false);
+};
+
+const updateBtnLow = (index: number, val: number) => {
+  if (!store.adc) return;
+  const vals = [...store.adc.raxis_to_button_low];
+  vals[index] = val;
+  store.updateADC({ raxis_to_button_low: vals });
+  store.updateADCField(HardwareSettingId.AdcButtonLow, index, val, false);
+};
+
+const updateBtnHigh = (index: number, val: number) => {
+  if (!store.adc) return;
+  const vals = [...store.adc.raxis_to_button_high];
+  vals[index] = val;
+  store.updateADC({ raxis_to_button_high: vals });
+  store.updateADCField(HardwareSettingId.AdcButtonHigh, index, val, false);
 };
 
 

@@ -12,7 +12,7 @@ To maintain code quality and scalability, all developers must follow these stric
 - **Full Abstraction**: Use traits to separate hardware logic from data storage (persistence). This ensures the system can be tested and extended without hardware dependencies.
 - **Test-Driven Development (TDD)**: Comprehensive tests for backends and the game runner must be maintained and updated with every change.
 - **Code in English**: All code (variables, functions, classes), comments, and technical documentation must be strictly in English for international standardization.
-- **Internationalization (i18n)**: The application must provide dynamic support for both **English (EN)** and **Portuguese (PT-BR)**.
+- **Internationalization (i18n)**: The application must provide dynamic support for **English (EN)**, **Spanish (ES)** and **Portuguese (PT-BR)**.
 - **Structured Logging**: Use structured logging (via `tracing` or similar) for all operations to facilitate debugging and monitoring.
 
 ---

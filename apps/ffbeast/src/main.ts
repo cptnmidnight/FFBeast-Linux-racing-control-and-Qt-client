@@ -6,16 +6,24 @@ import { setI18nInstance } from './i18n';
 
 // Styles
 import './styles/global.css';
-import '@fontsource/outfit/400.css';
-import '@fontsource/outfit/600.css';
-import '@fontsource/outfit/800.css';
-import '@fontsource/jetbrains-mono';
 
 // i18n
 import en from './locales/en.json';
 import br from './locales/pt-BR.json';
+import es from './locales/es.json';
+import ru from './locales/ru.json';
 
-const locale = navigator.language.startsWith('pt') ? 'pt-BR' : 'en';
+// Detect browser language
+const browserLang = navigator.language.toLowerCase();
+let locale = 'en'; // default
+
+if (browserLang.startsWith('pt')) {
+    locale = 'pt-BR';
+} else if (browserLang.startsWith('es')) {
+    locale = 'es';
+} else if (browserLang.startsWith('ru')) {
+    locale = 'ru';
+}
 
 const i18n = createI18n({
     legacy: false,
@@ -24,7 +32,9 @@ const i18n = createI18n({
     messages: {
         en,
         'pt-BR': br,
-        'pt': br
+        'pt': br,
+        'es': es,
+        'ru': ru
     }
 });
 

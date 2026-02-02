@@ -1,66 +1,66 @@
-# Especificação Geral: FFBeast UI
+# General Specification: FFBeast UI
 
-O **FFBeast UI** é a aplicação de configuração e monitoramento para o hardware de Force Feedback "FFBeast". Desenvolvido sobre a plataforma **Tauri v2**, utiliza **Vue 3**, **TypeScript** e **Vite** para uma interface moderna, reativa e tipada.
+**FFBeast UI** is the configuration and monitoring application for the "FFBeast" Force Feedback hardware. Built on the **Tauri v2** platform, it uses **Vue 3**, **TypeScript**, and **Vite** for a modern, reactive, and typed interface.
 
 ![Logo](../img/logo_app.png)
 
-## Arquitetura
+## Architecture
 
-- **Frontend**: Single Page Application (SPA) reativa.
+- **Frontend**: Reactive Single Page Application (SPA).
   - **Framework**: Vue 3 (Composition API).
-  - **Linguagem**: TypeScript (Strict Mode).
-  - **Estado**: Pinia (Store Centralizada `hardware.ts`).
-  - **Componentes**: SFC (Single File Components) modulares e reutilizáveis.
-  - **Estilização**: CSS Nativo seguindo o design system do projeto.
-  - **Internacionalização**: Vue I18n com suporte a EN e PT-BR.
-  - **Comunicação**: IPC via Tauri Commands.
+  - **Language**: TypeScript (Strict Mode).
+  - **State**: Pinia (Centralized Store `hardware.ts`).
+  - **Components**: Modular and reusable SFC (Single File Components).
+  - **Styling**: Native CSS following the project's design system.
+  - **Internationalization**: Vue I18n with EN and PT-BR support.
+  - **Communication**: IPC via Tauri Commands.
 
 - **Backend (Tauri/Rust)**: 
-  - Gerencia a janela nativa e a comunicação HID direto com o hardware.
-  - Expõe comandos como `connect`, `get_hardware_settings`, `save_settings`.
+  - Manages the native window and direct HID communication with the hardware.
+  - Exposes commands such as `connect`, `get_hardware_settings`, `save_settings`.
 
-## Funcionalidades Principais
+## Key Features
 
-### 1. Monitoramento (Dashboard)
-- Visualização em tempo real da posição do volante (Animação SVG 60FPS).
-- Barra de Torque/Force Feedback ao vivo.
-- Status do Firmware e Conexão.
-- Status de Botões em grade visual.
-- Monitoramento de Eixos Analógicos (ADC).
+### 1. Monitoring (Dashboard)
+- Real-time steering wheel position visualization (60FPS SVG Animation).
+- Live Torque/Force Feedback bar.
+- Firmware and Connection Status.
+- Visual grid Button Status.
+- Analog Axis Monitoring (ADC).
 
-### 2. Configuração de Hardware
-- **Motor e Encoder**: Definição de CPR, Limite de Potência, Polos.
-- **Calibração**: Reset de Centro, Calibração de ADC (Min/Max/Invert).
-- **PID Tuning**: Ajuste de ganhos P e I para o controle de posição/força.
+### 2. Hardware Configuration
+- **Motor and Encoder**: Definition of CPR, Power Limit, Poles.
+- **Calibration**: Center Reset, ADC Calibration (Min/Max/Invert).
+- **PID Tuning**: Adjustment of P and I gains for position/force control.
 
-### 3. Efeitos de Força (FFB)
-- Ajuste de ganhos globais e efeitos específicos (Spring, Damper, Friction, Inertia).
-- Configuração de "Motion Range" (Graus de rotação).
-- Inversão de força (Force Reversal).
+### 3. Force Effects (FFB)
+- Global gain adjustment and specific effects (Spring, Damper, Friction, Inertia).
+- "Motion Range" configuration (Rotation degrees).
+- Force Reversal.
 
-### 4. Entradas e GPIO
-- Mapeamento de pinos para botões e eixos.
-- Configuração de matriz de botões.
-- Seleção de protocolos de expansão (DirectHID, CAN-Bus, etc).
+### 4. Inputs and GPIO
+- Pin mapping for buttons and axes.
+- Button matrix configuration.
+- Expansion protocol selection (DirectHID, CAN-Bus, etc).
 
-### 5. Ferramentas e Sistema
-- **FFB Test**: Testes manuais de efeitos (Constant Force, Sine, etc).
-- **Logs**: Console interno para depuração de comandos.
-- **Configurações**: Customização da UI (Accent color, idioma).
-- **Licença**: Sistema de ativação e ID de hardware.
+### 5. Tools and System
+- **FFB Test**: Manual effect tests (Constant Force, Sine, etc).
+- **Logs**: Internal console for command debugging.
+- **Settings**: UI Customization (Accent color, language).
+- **License**: Activation system and hardware ID.
 
-## Estrutura de Pastas (src)
+## Folder Structure (src)
 
 ```
 apps/ffbeast/src
-├── assets/          # Assets estáticos
-├── components/      # Componentes Vue SFC
-│   ├── common/      # UI Base (BaseCard, BaseSlider, etc)
-│   ├── monitor/     # Widgets de monitoramento
-│   └── tabs/        # Abas principais da aplicação
-├── locales/         # Traduções (en.json, pt-BR.json)
-├── models/          # Interfaces e Types TypeScript (1 por arquivo)
-├── services/        # Abstração de comandos Tauri
-├── stores/          # Estado reativo (Pinia)
-└── styles/          # Variáveis CSS e estilos globais
+├── assets/          # Static assets
+├── components/      # Vue SFC Components
+│   ├── common/      # Base UI (BaseCard, BaseSlider, etc)
+│   ├── monitor/     # Monitoring widgets
+│   └── tabs/        # Application main tabs
+├── locales/         # Translations (en.json, pt-BR.json)
+├── models/          # TypeScript Interfaces and Types (1 per file)
+├── services/        # Tauri command abstraction
+├── stores/          # Reactive state (Pinia)
+└── styles/          # CSS variables and global styles
 ```
