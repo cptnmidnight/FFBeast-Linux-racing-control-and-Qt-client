@@ -1,49 +1,162 @@
-# FFBeast Configurator
+# FFBeast Linux Racing Control
 
-## Overview
+Linux-first FFBeast wheel configuration for sim racing.
 
-This project is a centralized workspace for the **FFBeast Steering Wheel Configurator**. It now uses a Rust backend/service architecture with a Qt desktop client for Linux-focused wheel configuration and telemetry.
+This project now uses:
+- a Rust backend/service for device I/O, protocol parsing, telemetry, and wheel control
+- a Qt desktop client implemented with Python/PySide6
 
-## Project Structure
+The current product focus is narrow by design:
+- driving simulators only
+- FFBeast wheel setup first
+- pedal and peripheral tuning only as advanced options
+- no flight-sim UI or flight-specific settings
 
-The workspace is organized as follows:
+## Workspace Layout
 
-- **`apps/`**: Contains the user-facing applications.
-  - **`ffbeast-service/`**: Rust stdio service exposing the FFBeast backend contract.
-  - **`ffbeast-qt/`**: Qt desktop client implemented with Python/PySide6.
-- **`libs/`**: Shared Rust libraries.
-  - **`controller/`**: A driver library for communicating with the FFBeast hardware via HID/USB.
-  - **`backend_api/`**: Shared request/response/event contract for frontend integration.
-- **`docs/`**: Project documentation and known issues.
+- `apps/ffbeast-service`
+  - Rust stdio JSON service process
+- `apps/ffbeast-qt`
+  - Python/PySide6 Qt client
+- `libs/controller`
+  - FFBeast HID/device access and protocol parsing
+- `libs/input_manager`
+  - input and profile-related backend logic
+- `libs/backend_api`
+  - shared request/response/event contract
+- `docs/`
+  - migration notes and project documentation
 
 ## Prerequisites
 
-- **Rust**: Latest stable version.
-- **Python**: 3.13+ recommended.
-- **PySide6**: for the Qt client.
-- Linux native dependencies for HID access (`libudev`) and Qt runtime support.
+- Linux
+- Rust stable with `cargo`
+- Python 3
+- PySide6
+- `libudev` development files for the Rust HID stack
 
-## Setup & Build
+If you use Nix, the included shell is the simplest way to get a working dev environment:
 
-1.  **Run backend verification**:
-    ```bash
-    cargo test -p ffbeast-controller
-    cargo check -p ffbeast-backend-api -p ffbeast-service
-    ```
+```bash
+nix-shell
+```
 
-2.  **Run the Qt client**:
-    ```bash
-    python3 apps/ffbeast-qt/main.py
-    ```
+## Quick Start
 
-3.  **Run the Rust service directly**:
-    ```bash
-    cargo run -p ffbeast-service
-    ```
+1. Enter the dev shell:
 
-## Features
+```bash
+nix-shell
+```
 
-- **Linux-first Architecture**: Rust service + Qt client.
-- **Modular Backend**: separate crates for hardware, input management, and API contract.
-- **Qt Client Workflow**: handshake loading, telemetry, effects/hardware/GPIO/ADC editing, maintenance actions, and local profiles.
-- **Real-time Monitoring**: High-frequency telemetry for wheel position, torque, and IO states.
+2. Verify the backend crates:
+
+```bash
+cargo test -p ffbeast-controller
+cargo check -p ffbeast-backend-api -p ffbeast-service
+```
+
+3. Launch the Qt client:
+
+```bash
+python3 apps/ffbeast-qt/main.py
+```
+
+The Qt client starts `ffbeast-service` automatically by default.
+
+## Run The Service Directly
+
+Run the backend service on its own:
+
+```bash
+cargo run -p ffbeast-service
+```
+
+The service uses line-delimited JSON over stdio.
+
+## Current UI Scope
+
+The Qt client is structured around a sim-racing workflow:
+
+- `Drive`
+  - steering range
+  - total force strength
+  - soft stop settings
+  - dampening settings
+- `Wheel Setup`
+  - force enablement
+  - direction controls
+  - power and braking limits
+  - encoder and motor setup
+- `Profiles`
+  - save, load, and apply sim-specific profiles
+- `Maintenance`
+  - save settings
+  - reset center
+  - reboot
+  - DFU
+- `Advanced`
+  - calibration
+  - control-loop tuning
+  - GPIO/ADC and other peripheral settings
+
+## Useful Commands
+
+Backend checks:
+
+```bash
+cargo test -p ffbeast-controller
+cargo check -p ffbeast-backend-api -p ffbeast-service
+```
+
+Qt syntax check:
+
+```bash
+python3 -m py_compile \
+  apps/ffbeast-qt/main.py \
+  apps/ffbeast-qt/service_client.py \
+  apps/ffbeast-qt/settings_tabs.py \
+  apps/ffbeast-qt/profile_store.py
+```
+
+## Environment Overrides
+
+Override the service command used by the Qt client:
+
+```bash
+FFBEAST_SERVICE_CMD="cargo run -p ffbeast-service --quiet" python3 apps/ffbeast-qt/main.py
+```
+
+Run the Qt client offscreen for a smoke test:
+
+```bash
+QT_QPA_PLATFORM=offscreen python3 apps/ffbeast-qt/main.py
+```
+
+## Troubleshooting
+
+If `cargo test` or `cargo check` fails with `linker cc not found`:
+
+```bash
+nix-shell
+```
+
+If the wheel is not detected:
+- confirm the device appears in `lsusb`
+- confirm your user can access `/dev/hidraw*`
+- check `udev` permissions
+- try launching from the provided Nix shell first
+
+If the Qt client starts but cannot talk to the backend:
+- run `cargo run -p ffbeast-service` directly to confirm the service starts
+- check the log pane in the Qt app
+- verify `FFBEAST_SERVICE_CMD` is not pointing at an invalid command
+
+## Status
+
+This repo has moved away from the previous Tauri frontend. The active architecture is:
+
+- Rust backend/service
+- Python/PySide6 Qt client
+
+The next validation step is real hardware testing against an FFBeast wheel on Linux.
