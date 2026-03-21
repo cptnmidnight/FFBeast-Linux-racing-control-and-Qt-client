@@ -1,8 +1,10 @@
 [workspace]
 resolver = "2"
 members = [
+    "apps/ffbeast-service",
+    "libs/backend_api",
     "libs/controller",
-    "apps/ffbeast/src-tauri", "libs/input_manager",
+    "libs/input_manager",
 ]
 
 [profile.release]

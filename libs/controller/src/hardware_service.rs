@@ -2,18 +2,24 @@ use crate::gamepad_reader::{GamepadReader, create_gamepad_reader};
 use crate::models::{
     AdcSettings, EffectSettings, GpioSettings, HardwareSettingId, HardwareSettings, WheelStatus,
 };
+use crate::protocol::{
+    CMD_DFU_MODE, CMD_FIRMWARE_ACTIVATION_DATA, CMD_OVERRIDE_DATA, CMD_REBOOT, CMD_RESET_CENTER,
+    CMD_SAVE_SETTINGS, CMD_SETTINGS_FIELD_DATA, LicenseInfo, REPORT_ADC_SETTINGS_FEATURE,
+    REPORT_EFFECT_SETTINGS_FEATURE, REPORT_FIRMWARE_LICENSE_FEATURE, REPORT_GENERIC_INPUT_OUTPUT,
+    REPORT_GPIO_SETTINGS_FEATURE, REPORT_HARDWARE_SETTINGS_FEATURE, USB_VID, WHEEL_PID,
+    parse_adc_settings_report, parse_effect_settings_report, parse_gpio_settings_report,
+    parse_hardware_settings_report, parse_license_report, parse_status_report,
+};
 use crate::wheel_interface::WheelInterface;
 use anyhow::{Result, anyhow};
 use hidapi::{HidApi, HidDevice};
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::{Arc, Mutex};
 use tracing::instrument;
 
-const USB_VID: u16 = 1115;
-const WHEEL_PID: u16 = 22999;
-
 pub struct HardwareService {
     device: Arc<Mutex<Option<HidDevice>>>,
-    license_info: Arc<Mutex<Option<([u32; 3], [u32; 3])>>>,
+    license_info: Arc<Mutex<Option<LicenseInfo>>>,
     gamepad_reader: Mutex<Option<Box<dyn GamepadReader>>>,
 }
 
@@ -44,8 +50,8 @@ impl HardwareService {
             .ok_or_else(|| anyhow!("Device not connected"))?;
 
         let mut buf = [0u8; 65];
-        buf[0] = 0xA3; // REPORT_GENERIC_INPUT_OUTPUT
-        buf[1] = 0x14; // DATA_SETTINGS_FIELD_DATA
+        buf[0] = REPORT_GENERIC_INPUT_OUTPUT;
+        buf[1] = CMD_SETTINGS_FIELD_DATA;
         buf[2] = field_id;
         buf[3] = index;
 
@@ -67,8 +73,8 @@ impl HardwareService {
             .ok_or_else(|| anyhow!("Device not connected"))?;
 
         let mut buf = [0u8; 65];
-        buf[0] = 0xA3; // REPORT_GENERIC_INPUT_OUTPUT
-        buf[1] = 0x13; // DATA_FIRMWARE_ACTIVATION_DATA
+        buf[0] = REPORT_GENERIC_INPUT_OUTPUT;
+        buf[1] = CMD_FIRMWARE_ACTIVATION_DATA;
 
         // Key: 3x u32 (12 bytes)
         let mut offset = 2;
@@ -111,45 +117,25 @@ impl HardwareService {
         }
     }
 
-    fn read_license_internal(&self) -> Result<([u32; 3], [u32; 3])> {
-        // License report is usually around 30 bytes (1 ID + 29 data)
-        let buf = self.read_feature_report(0x25, 65)?;
-        let res = buf.len();
+    fn read_license_internal(&self) -> Result<LicenseInfo> {
+        let buf = self.read_feature_report(REPORT_FIRMWARE_LICENSE_FEATURE, 65)?;
+        let info = parse_license_report(&buf)?;
+        tracing::info!(
+            "License info fetched: ID={:?}, Serial={:?}",
+            info.0,
+            info.1
+        );
+        Ok(info)
+    }
 
-        if res < 30 {
-            tracing::warn!("License feature report too short: {} bytes", res);
-            return Err(anyhow!("License report too short: {}", res));
-        }
+    #[cfg(target_os = "linux")]
+    fn linux_access_hint() -> &'static str {
+        " Check hidraw permissions and udev rules for the FFBeast VID/PID."
+    }
 
-        // Layout: [ReportID(1), FW(4), Serial(12), ID(12), IsReg(1)...]
-        let mut serial = [0u32; 3];
-        for i in 0..3 {
-            let offset = 5 + i * 4;
-            if offset + 3 < res {
-                serial[i] = u32::from_le_bytes([
-                    buf[offset],
-                    buf[offset + 1],
-                    buf[offset + 2],
-                    buf[offset + 3],
-                ]);
-            }
-        }
-
-        let mut id = [0u32; 3];
-        for i in 0..3 {
-            let offset = 17 + i * 4;
-            if offset + 3 < res {
-                id[i] = u32::from_le_bytes([
-                    buf[offset],
-                    buf[offset + 1],
-                    buf[offset + 2],
-                    buf[offset + 3],
-                ]);
-            }
-        }
-
-        tracing::info!("License info fetched: ID={:?}, Serial={:?}", id, serial);
-        Ok((id, serial))
+    #[cfg(not(target_os = "linux"))]
+    fn linux_access_hint() -> &'static str {
+        ""
     }
 }
 
@@ -170,8 +156,8 @@ impl WheelInterface for HardwareService {
             }
         }
 
-        static PROCESS_COUNTER: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
-        let count = PROCESS_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        static PROCESS_COUNTER: AtomicU32 = AtomicU32::new(0);
+        let count = PROCESS_COUNTER.fetch_add(1, Ordering::Relaxed);
         if count % 120 == 0 {
             tracing::info!(
                 "Searching for FFBeast Controller (VID: {}, PID: {})...",
@@ -215,14 +201,15 @@ impl WheelInterface for HardwareService {
                 })
                 .collect();
             anyhow!(
-                "FFBeast Controller not found. Available devices: {:?}",
-                all_devs
+                "FFBeast Controller not found. Available devices: {:?}.{}",
+                all_devs,
+                Self::linux_access_hint()
             )
         })?;
 
         let hid_dev = api
             .open_path(&path)
-            .map_err(|e| anyhow!("Failed to open device path {:?}: {}", path, e))?;
+            .map_err(|e| anyhow!("Failed to open device path {:?}: {}.{}", path, e, Self::linux_access_hint()))?;
 
         // Timeout for non-blocking reading
         hid_dev.set_blocking_mode(false).ok();
@@ -266,70 +253,21 @@ impl WheelInterface for HardwareService {
         let mut buf = [0u8; 64];
         match dev.read_timeout(&mut buf, 10) {
             Ok(res) if res >= 8 => {
-                // LOG COMPLETO DO BUFFER PARA DEBUG
-                static mut LAST_BUF: [u8; 64] = [0; 64];
-                static mut LOG_COUNT: usize = 0;
-                unsafe {
-                    // Use addr_of! to get raw pointer without creating references
-                    let last_buf_ptr = std::ptr::addr_of!(LAST_BUF) as *const u8;
-                    let last_buf_mut_ptr = std::ptr::addr_of_mut!(LAST_BUF) as *mut u8;
-
-                    let last_buf_slice = std::slice::from_raw_parts(last_buf_ptr, res);
-                    let changed = last_buf_slice != &buf[..res];
-
-                    if LOG_COUNT < 5 || changed {
-                        tracing::debug!("HID Report [{}bytes]: {:02X?}", res, &buf[..res]);
-                        std::ptr::copy_nonoverlapping(buf.as_ptr(), last_buf_mut_ptr, buf.len());
-                        LOG_COUNT += 1;
-                    }
+                static LOG_COUNT: AtomicU32 = AtomicU32::new(0);
+                if LOG_COUNT.fetch_add(1, Ordering::Relaxed) < 5 {
+                    tracing::debug!("HID Report [{}bytes]: {:02X?}", res, &buf[..res]);
                 }
 
-                // Check if it's a valid FFBeast report (usually starts with 0xA3 or 0x01 on Windows)
-                // If buf[0] is not 0xA3 or 0x01, it might be a raw report without ID (offset 0)
-                // Given the log "HID Read [A3 01 ...]", buf[0] is the Report ID.
-                if buf[0] != 0xA3 && buf[0] != 0x01 {
-                    return Err(anyhow!("Unexpected Report ID: 0x{:02X}", buf[0]));
-                }
-
-                let firmware = crate::models::wheel_status::FirmwareVersion {
-                    release_type: buf[1],
-                    major: buf[2],
-                    minor: buf[3],
-                    patch: buf[4],
-                };
-
-                let pos = i16::from_le_bytes([buf[6], buf[7]]);
-                let mut torque = 0i16;
-                let mut buttons = 0u32;
-                let mut adc = [0u16; 6];
-
-                // Safely fill torque if enough bytes
-                if res >= 10 {
-                    torque = i16::from_le_bytes([buf[8], buf[9]]);
-                }
-                // Safely fill buttons
-                if res >= 14 {
-                    buttons = u32::from_le_bytes([buf[10], buf[11], buf[12], buf[13]]);
-                }
-                let is_registered = buf[5] != 0;
-                let available_adc = if res >= 14 {
-                    ((res - 14) / 2).min(6)
-                } else {
-                    0
-                };
-
-                for i in 0..available_adc {
-                    adc[i] = u16::from_le_bytes([buf[14 + i * 2], buf[15 + i * 2]]);
-                }
+                let mut status = parse_status_report(&buf[..res])?;
 
                 // ALWAYS log first 10 packets AND whenever buttons/ADC are non-zero
                 tracing::trace!(
                     "HID Status [{}bytes]: pos={} torque={} buttons=0x{:08X} adc={:?}",
                     res,
-                    pos,
-                    torque,
-                    buttons,
-                    adc
+                    status.position,
+                    status.torque,
+                    status.buttons,
+                    status.adc
                 );
 
                 // Merge gamepad data (cross-platform button/axis reading)
@@ -338,15 +276,15 @@ impl WheelInterface for HardwareService {
                     if let Some(ref mut gamepad) = *gp_lock {
                         if let Ok(gamepad_state) = gamepad.read_state() {
                             // Merge buttons: Use HID if available, otherwise use gamepad
-                            if buttons == 0 && gamepad_state.buttons != 0 {
-                                buttons = gamepad_state.buttons;
-                                tracing::debug!("Using gamepad buttons: 0x{:08X}", buttons);
+                            if status.buttons == 0 && gamepad_state.buttons != 0 {
+                                status.buttons = gamepad_state.buttons;
+                                tracing::debug!("Using gamepad buttons: 0x{:08X}", status.buttons);
                             }
 
                             // Merge ADC: Use HID if available, otherwise use gamepad
                             for i in 0..6 {
-                                if adc[i] == 0 && gamepad_state.axes[i] > 0 {
-                                    adc[i] = gamepad_state.axes[i];
+                                if status.adc[i] == 0 && gamepad_state.axes[i] > 0 {
+                                    status.adc[i] = gamepad_state.axes[i];
                                 }
                             }
 
@@ -354,10 +292,8 @@ impl WheelInterface for HardwareService {
                             if gamepad_state.buttons != 0
                                 || gamepad_state.axes.iter().any(|&v| v > 0)
                             {
-                                static PROCESS_COUNTER: std::sync::atomic::AtomicU32 =
-                                    std::sync::atomic::AtomicU32::new(0);
-                                let count = PROCESS_COUNTER
-                                    .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                                static PROCESS_COUNTER: AtomicU32 = AtomicU32::new(0);
+                                let count = PROCESS_COUNTER.fetch_add(1, Ordering::Relaxed);
                                 if count % 120 == 0 {
                                     tracing::trace!(
                                         "Gamepad data: buttons=0x{:08X} axes={:?}",
@@ -374,49 +310,26 @@ impl WheelInterface for HardwareService {
                 let (final_id, final_key) = {
                     let mut lic_cache = self.license_info.lock().unwrap();
                     if lic_cache.is_none() {
-                        // Attempt to fetch it manually since we have the device locked already
-                        let mut self_buf = [0u8; 65]; // Increased to 65 for Windows stability (must be fixed for Linux compatibility)
-                        self_buf[0] = 0x25; // REPORT_FIRMWARE_LICENSE_FEATURE
-                        if let Ok(count) = dev.get_feature_report(&mut self_buf) {
-                            if count >= 30 {
-                                let mut s = [0u32; 3];
-                                let mut id = [0u32; 3];
-                                for i in 0..3 {
-                                    s[i] = u32::from_le_bytes([
-                                        self_buf[5 + i * 4],
-                                        self_buf[6 + i * 4],
-                                        self_buf[7 + i * 4],
-                                        self_buf[8 + i * 4],
-                                    ]);
-                                    id[i] = u32::from_le_bytes([
-                                        self_buf[17 + i * 4],
-                                        self_buf[18 + i * 4],
-                                        self_buf[19 + i * 4],
-                                        self_buf[20 + i * 4],
-                                    ]);
+                        let mut feature_buf = [0u8; 65];
+                        feature_buf[0] = REPORT_FIRMWARE_LICENSE_FEATURE;
+                        if let Ok(count) = dev.get_feature_report(&mut feature_buf) {
+                            match parse_license_report(&feature_buf[..count]) {
+                                Ok(info) => {
+                                    tracing::info!(
+                                        "License info auto-loaded: ID={:?}, Serial={:?}",
+                                        info.0,
+                                        info.1
+                                    );
+                                    *lic_cache = Some(info);
                                 }
-                                tracing::info!(
-                                    "License info auto-loaded: ID={:?}, Serial={:?}",
-                                    id,
-                                    s
-                                );
-                                *lic_cache = Some((id, s));
-                            } else {
-                                tracing::warn!(
-                                    "License feature report length mismatch: expected >=30, got {}",
-                                    count
-                                );
+                                Err(e) => tracing::warn!("Invalid license feature report: {e}"),
                             }
                         } else {
-                            // Only log once to avoid spamming
-                            static mut LOGGED_FAIL: bool = false;
-                            unsafe {
-                                if !LOGGED_FAIL {
-                                    tracing::warn!(
-                                        "License feature report (0x25) failed or not supported by device."
-                                    );
-                                    LOGGED_FAIL = true;
-                                }
+                            static LOGGED_FAIL: AtomicBool = AtomicBool::new(false);
+                            if !LOGGED_FAIL.swap(true, Ordering::Relaxed) {
+                                tracing::warn!(
+                                    "License feature report (0x25) failed or not supported by device."
+                                );
                             }
                         }
                     }
@@ -427,17 +340,9 @@ impl WheelInterface for HardwareService {
                     }
                 };
 
-                Ok(WheelStatus {
-                    position: pos,
-                    torque,
-                    buttons,
-                    adc,
-                    is_connected: true,
-                    firmware,
-                    is_registered,
-                    device_id: final_id,
-                    serial_key: final_key,
-                })
+                status.device_id = final_id;
+                status.serial_key = final_key;
+                Ok(status)
             }
             Ok(0) => Err(anyhow!("Read Timeout")),
             Ok(res) => Err(anyhow!("Report too short: {} bytes", res)),
@@ -451,50 +356,26 @@ impl WheelInterface for HardwareService {
 
     #[instrument(skip(self), err)]
     fn read_effect_settings(&self) -> Result<EffectSettings> {
-        let buf = self.read_feature_report(0x22, 65)?;
-        if buf.len() > 1 {
-            let settings: EffectSettings =
-                unsafe { std::ptr::read(buf[1..].as_ptr() as *const EffectSettings) };
-            Ok(settings)
-        } else {
-            Err(anyhow!("Failed to read feature report 0x22"))
-        }
+        let buf = self.read_feature_report(REPORT_EFFECT_SETTINGS_FEATURE, 65)?;
+        parse_effect_settings_report(&buf)
     }
 
     #[instrument(skip(self), err)]
     fn read_hardware_settings(&self) -> Result<HardwareSettings> {
-        let buf = self.read_feature_report(0x21, 65)?;
-        if buf.len() > 1 {
-            let settings: HardwareSettings =
-                unsafe { std::ptr::read(buf[1..].as_ptr() as *const HardwareSettings) };
-            Ok(settings)
-        } else {
-            Err(anyhow!("Failed to read feature report 0x21"))
-        }
+        let buf = self.read_feature_report(REPORT_HARDWARE_SETTINGS_FEATURE, 65)?;
+        parse_hardware_settings_report(&buf)
     }
 
     #[instrument(skip(self), err)]
     fn read_gpio_settings(&self) -> Result<GpioSettings> {
-        let buf = self.read_feature_report(0xA1, 65)?;
-        if buf.len() > 1 {
-            let settings: GpioSettings =
-                unsafe { std::ptr::read(buf[1..].as_ptr() as *const GpioSettings) };
-            Ok(settings)
-        } else {
-            Err(anyhow!("Failed to read feature report 0xA1"))
-        }
+        let buf = self.read_feature_report(REPORT_GPIO_SETTINGS_FEATURE, 65)?;
+        parse_gpio_settings_report(&buf)
     }
 
     #[instrument(skip(self), err)]
     fn read_adc_settings(&self) -> Result<AdcSettings> {
-        let buf = self.read_feature_report(0xA2, 65)?;
-        if buf.len() > 1 {
-            let settings: AdcSettings =
-                unsafe { std::ptr::read(buf[1..].as_ptr() as *const AdcSettings) };
-            Ok(settings)
-        } else {
-            Err(anyhow!("Failed to read feature report 0xA2"))
-        }
+        let buf = self.read_feature_report(REPORT_ADC_SETTINGS_FEATURE, 65)?;
+        parse_adc_settings_report(&buf)
     }
 
     #[instrument(skip(self), err)]
@@ -606,8 +487,8 @@ impl WheelInterface for HardwareService {
             .ok_or_else(|| anyhow!("Device not connected"))?;
 
         let mut buf = [0u8; 65];
-        buf[0] = 0xA3; // Report ID
-        buf[1] = 0x04; // DATA_COMMAND_RESET_CENTER
+        buf[0] = REPORT_GENERIC_INPUT_OUTPUT;
+        buf[1] = CMD_RESET_CENTER;
 
         dev.write(&buf)?;
         Ok(())
@@ -621,8 +502,8 @@ impl WheelInterface for HardwareService {
             .ok_or_else(|| anyhow!("Device not connected"))?;
 
         let mut buf = [0u8; 65];
-        buf[0] = 0xA3; // Report ID (REPORT_GENERIC_INPUT_OUTPUT)
-        buf[1] = 0x02; // DATA_COMMAND_SAVE_SETTINGS
+        buf[0] = REPORT_GENERIC_INPUT_OUTPUT;
+        buf[1] = CMD_SAVE_SETTINGS;
 
         dev.write(&buf)
             .map_err(|e| anyhow!("Failed to save settings: {}", e))?;
@@ -637,8 +518,8 @@ impl WheelInterface for HardwareService {
             .ok_or_else(|| anyhow!("Device not connected"))?;
 
         let mut buf = [0u8; 65];
-        buf[0] = 0xA3; // Report ID (REPORT_GENERIC_INPUT_OUTPUT)
-        buf[1] = 0x01; // DATA_COMMAND_REBOOT
+        buf[0] = REPORT_GENERIC_INPUT_OUTPUT;
+        buf[1] = CMD_REBOOT;
 
         dev.write(&buf)
             .map_err(|e| anyhow!("Failed to reboot device: {}", e))?;
@@ -653,8 +534,8 @@ impl WheelInterface for HardwareService {
             .ok_or_else(|| anyhow!("Device not connected"))?;
 
         let mut buf = [0u8; 65];
-        buf[0] = 0xA3; // Report ID
-        buf[1] = 0x03; // DATA_COMMAND_DFU_MODE
+        buf[0] = REPORT_GENERIC_INPUT_OUTPUT;
+        buf[1] = CMD_DFU_MODE;
 
         dev.write(&buf)
             .map_err(|e| anyhow!("Failed to switch to DFU mode: {}", e))?;
@@ -669,8 +550,8 @@ impl WheelInterface for HardwareService {
             .ok_or_else(|| anyhow!("Device not connected"))?;
 
         let mut buf = [0u8; 65];
-        buf[0] = 0xA3; // REPORT_GENERIC_INPUT_OUTPUT
-        buf[1] = 0x10; // DATA_OVERRIDE_DATA
+        buf[0] = REPORT_GENERIC_INPUT_OUTPUT;
+        buf[1] = CMD_OVERRIDE_DATA;
 
         // DirectControlTypeDef: Spring(i16), Constant(i16), Periodic(i16), ForceDrop(u8)
         let bytes = value.to_le_bytes();

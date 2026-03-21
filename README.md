@@ -2,45 +2,48 @@
 
 ## Overview
 
-This project is a centralized workspace for the **FFBeast Steering Wheel Configurator**. It combines a Rust-based backend with a modern, dynamic frontend (Tauri/Web) to configure advanced Force Feedback hardware.
+This project is a centralized workspace for the **FFBeast Steering Wheel Configurator**. It now uses a Rust backend/service architecture with a Qt desktop client for Linux-focused wheel configuration and telemetry.
 
 ## Project Structure
 
 The workspace is organized as follows:
 
 - **`apps/`**: Contains the user-facing applications.
-  - **`ffbeast/`**: A Tauri-based application for configuring the FFBeast Direct Drive Wheel. Includes PID tuning, effects mapping, and hardware monitoring.
+  - **`ffbeast-service/`**: Rust stdio service exposing the FFBeast backend contract.
+  - **`ffbeast-qt/`**: Qt desktop client implemented with Python/PySide6.
 - **`libs/`**: Shared Rust libraries.
   - **`controller/`**: A driver library for communicating with the FFBeast hardware via HID/USB.
+  - **`backend_api/`**: Shared request/response/event contract for frontend integration.
 - **`docs/`**: Project documentation and known issues.
 
 ## Prerequisites
 
 - **Rust**: Latest stable version.
-- **Node.js**: LTS version (v18+).
-- **Tauri CLI**: `cargo install tauri-cli`
+- **Python**: 3.13+ recommended.
+- **PySide6**: for the Qt client.
+- Linux native dependencies for HID access (`libudev`) and Qt runtime support.
 
 ## Setup & Build
 
-1.  **Install Dependencies**:
+1.  **Run backend verification**:
     ```bash
-    npm install
+    cargo test -p ffbeast-controller
+    cargo check -p ffbeast-backend-api -p ffbeast-service
     ```
 
-2.  **Run Configurator in Dev Mode**:
+2.  **Run the Qt client**:
     ```bash
-    cd apps/ffbeast
-    npm run tauri dev
+    python3 apps/ffbeast-qt/main.py
     ```
 
-3.  **Build Release**:
+3.  **Run the Rust service directly**:
     ```bash
-    npm run tauri build
+    cargo run -p ffbeast-service
     ```
 
 ## Features
 
-- **Cross-Platform**: Built on Rust and web technologies for Windows (primary) and Linux support.
-- **Modular Architecture**: separate services for Hardware, Effects, and UI rendering.
-- **Internationalization**: Full support for EN, ES and PT-BR.
+- **Linux-first Architecture**: Rust service + Qt client.
+- **Modular Backend**: separate crates for hardware, input management, and API contract.
+- **Qt Client Workflow**: handshake loading, telemetry, effects/hardware/GPIO/ADC editing, maintenance actions, and local profiles.
 - **Real-time Monitoring**: High-frequency telemetry for wheel position, torque, and IO states.

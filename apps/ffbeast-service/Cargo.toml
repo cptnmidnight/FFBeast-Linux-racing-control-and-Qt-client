@@ -1,0 +1,12 @@
+[package]
+name = "ffbeast-service"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+ffbeast-backend-api = { path = "../../libs/backend_api" }
+ffbeast-controller = { path = "../../libs/controller" }
+sodevs-input-manager = { path = "../../libs/input_manager" }
+serde_json = "1"
+tracing = "0.1"

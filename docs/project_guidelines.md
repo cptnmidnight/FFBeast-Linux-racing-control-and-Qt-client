@@ -1,6 +1,6 @@
 # Project Guidelines & Standards
 
-This document outlines the mandatory rules, technical standards, and visual identity for the **SODevs Game Launcher** project.
+This document outlines the mandatory rules, technical standards, and UI direction for the FFBeast Linux project.
 
 ## 📌 Project Rules (Mandatory)
 
@@ -19,33 +19,35 @@ To maintain code quality and scalability, all developers must follow these stric
 
 ## 🎨 Visual Identity & UI Standards
 
-The SODevs Game Launcher aims for a premium, high-performance aesthetic.
+The FFBeast Linux client aims for a focused, high-clarity desktop hardware tool.
 
 ### Core Visuals
-- **Primary Theme**: Dark Mode by default.
-- **Color Palette**: Deep purples, slate grays, and vibrant accent colors (neon violet/cyan).
-- **Aesthetics**: Glassmorphism, subtle gradients, and clean borders.
+- **Primary Theme**: Functional desktop UI optimized for configurators and telemetry.
+- **Color Palette**: High-contrast industrial UI colors are preferred over decorative theming.
+- **Aesthetics**: Clear controls, stable layouts, readable numeric state, and low-friction maintenance workflows.
 
 ### User Experience (UX)
-- **Performance**: High-reactivity UI (60Hz target) for hardware monitoring.
-- **Animations**: Fluid transitions and micro-animations for interactive elements (buttons, sliders, steering wheel visual).
-- **Responsive Layout**: The interface must adapt seamlessly to different window sizes while maintaining the grid-based library view.
+- **Performance**: High-reactivity UI for hardware monitoring and settings updates.
+- **Animations**: Minimal. Prefer responsiveness and clarity over ornamental motion.
+- **Responsive Layout**: The interface must adapt to typical Linux desktop window sizes without sacrificing readability.
 
 ---
 
 ## 🛠️ Technical Stack
 
 - **Backend**: Rust (Performance, Safety, Concurrency).
-- **Frontend**: Tauri (HTML/JS/Vanilla CSS) for a lightweight, native-feeling experience.
-- **Database**: SQLite for local persistence (Game library, profiles).
-- **Configuration**: TOML for global application settings.
+- **Backend Service**: Rust stdio JSON process (`apps/ffbeast-service`).
+- **Frontend**: Qt client via Python/PySide6 (`apps/ffbeast-qt`).
+- **Profiles**: Local file-based persistence for now.
 
 ---
 
 ## 📁 Directory Structure
 
-- `apps/ffbeast`: The main hardware configuration tool.
+- `apps/ffbeast-service`: Backend process.
+- `apps/ffbeast-qt`: Qt desktop client.
 - `libs/controller`: Core hardware abstraction and communication logic.
+- `libs/backend_api`: Shared frontend/backend protocol contract.
 - `docs`: Technical specifications and project documentation.
 
 ---
